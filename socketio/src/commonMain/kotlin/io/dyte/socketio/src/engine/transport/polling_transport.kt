@@ -1,0 +1,223 @@
+import io.dyte.socketio.src.Logger
+import io.dyte.socketio.src.engine.EnginePacket
+import io.ktor.http.*
+import io.ktor.util.date.*
+
+abstract class PollingTransport: Transport {
+  
+  /**
+    Transport name.
+   */
+  override var name: String = "polling";
+
+  override var supportsBinary: Boolean = false;
+  var polling: Boolean = false;
+
+  /**
+  * Polling interface.
+    * @param {Object} opts
+    * @api private
+  */
+  constructor(opts: TransportOptions, socket: EngineSocket?) : super(opts, socket) {
+    var forceBase64 = opts.forceBase64 == true;
+    if (/*!hasXHR2 || */ forceBase64) {
+      supportsBinary = false;
+    }
+  }
+
+  /**
+    * Opens the socket (triggers polling). We write a PING message to determine
+    * when the transport is open.
+    * @api private
+  */
+  override fun doOpen() {
+    poll();
+  }
+
+  /**
+  * Pauses polling.
+    * @param {Function} callback upon buffers are flushed and transport is paused
+    * @api private
+  */
+  fun pause(onPause: () -> Unit) {
+    var self = this;
+
+    readyState = "pausing";
+
+    var pause = fun () {
+      Logger.fine("paused");
+      self.readyState = "paused";
+      onPause();
+    };
+
+    if (polling == true || writable != true) {
+      var total = 0;
+
+      if (polling == true) {
+        Logger.fine("we are currently polling - waiting to pause");
+        total++;
+        once("pollComplete", fun (d: Any?) {
+          Logger.fine("pre-pause polling complete");
+          if (--total == 0) pause();
+        });
+      }
+
+      if (writable != true) {
+        Logger.fine("we are currently writing - waiting to pause");
+        total++;
+        once("drain", fun (data: Any? ) {
+          Logger.fine("pre-pause writing complete");
+          if (--total == 0) pause();
+        });
+      }
+    } else {
+      pause();
+    }
+  }
+
+  /**
+    * Starts polling cycle.
+    * @api public
+  */
+  fun poll() {
+    Logger.fine("polling");
+    polling = true;
+    doPoll();
+    emit("poll");
+  }
+
+  /**
+    * Overloads onData to detect payloads.
+    * @api private
+  */
+  override fun onData(data: Any) {
+    var self = this;
+    Logger.fine("polling got data $data");
+    var callback = fun (packet: EnginePacket<*>) {
+      Logger.fine("callback poll_transport onData");
+      // if its the first message we consider the transport open
+      if ("opening" == self.readyState) {
+        self.onOpen();
+      }
+
+      // if its a close packet, we close the ongoing requests
+      if ("close" == packet.type) {
+        self.onClose();
+        return;
+      }
+
+      // otherwise bypass onData and handle the message
+      self.onPacket(packet);
+      return;
+    };
+
+    // decode payload
+    PacketParser.decodePayload(data as String).forEach(callback);
+
+    // if an event did not trigger closing
+    if ("closed" != readyState) {
+      // if we got data we"re not polling
+      polling = false;
+      emit("pollComplete");
+
+      if ("open" == readyState) {
+        poll();
+      } else {
+        Logger.fine("ignoring poll - transport state ${readyState}");
+      }
+    }
+  }
+
+  /**
+    * For polling, send a close packet.
+    * @api private
+  */
+  override fun doClose() {
+    var self = this;
+
+    var _close = fun (data: Any?)  {
+      Logger.fine("writing close packet");
+      self.write(
+        listOf(EnginePacket("close")
+      ));
+    };
+
+    if ("open" == readyState) {
+      Logger.fine("transport open - closing");
+      _close(null);
+    } else {
+      // in case we"re trying to close while
+      // handshaking is in progress (GH-164)
+      Logger.fine("transport not open - deferring close");
+      once("open", _close);
+    }
+  }
+
+  /**
+    * Writes a packets payload.
+    * @param {List} data packets
+    * @param {Function} drain callback
+    * @api private
+  */
+  override fun write(packets: List<EnginePacket<Any>>) {
+    var self = this;
+    writable = false;
+    var callbackfn = fun(data: Any?) {
+      self.writable = true;
+      self.emit("drain");
+    };
+
+    PacketParser.encodePayload(packets, callback= fun (data) {
+      self.doWrite(data, callbackfn);
+    });
+  }
+
+  /**
+    * Generates uri for connection.
+    * @api private
+  */
+  fun uri(): String {
+    var query = this.query; //TODO: or else
+    Logger.fine("3 ${query.formUrlEncode()}")
+    var schema = if(secure)  "https" else "http";
+    var port = "";
+
+    // cache busting is forced
+    if (timestampRequests) {
+      query = query.plus(
+        Parameters.build { append(timestampParam as String, GMTDate().timestamp.toString(36)); })
+    }
+
+    if (supportsBinary == false && !query.contains("sid")) {
+      query = query.plus(
+        Parameters.build { append("b64", "1") }
+      )
+    }
+
+
+    // afun port if default for schema
+    if (this.port > 0 &&
+        (("https" == schema && this.port != 443) ||
+            ("http" == schema && this.port != 80))) {
+      port = ":${this.port}";
+    }
+
+    var queryString = query.formUrlEncode()
+
+    // prepend ? to query
+    if (queryString.isNotEmpty()) {
+      queryString = "?$queryString";
+    }
+
+    var ipv6 = hostname.contains(":");
+    return schema +
+            "://" +
+            (if(ipv6) "[" + hostname + "]" else hostname) +
+            port +
+            path +
+            queryString;
+  }
+
+  abstract fun doWrite(data: String, callback: (data: Any?) -> Unit);
+  abstract fun doPoll();
+}
