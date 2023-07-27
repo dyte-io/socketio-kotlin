@@ -1,0 +1,37 @@
+name: Release to Maven
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  publish:
+    name: Release build and publish
+    runs-on: macos-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v2
+        with:
+          token: ${{ secrets.SEMANTIC_RELEASE_PAT }}
+      - uses: actions/setup-node@v2
+        with:
+          node-version: 18
+      - name: Set up JDK 11
+        uses: actions/setup-java@v2
+        with:
+          distribution: adopt
+          java-version: 11
+          cache: gradle
+
+      - name: Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.SEMANTIC_RELEASE_PAT }}
+          NPM_TOKEN: ${{ secrets.SEMANTIC_RELEASE_PAT }}
+          NODE_AUTH_TOKEN: ${{ secrets.SEMANTIC_RELEASE_PAT }}
+          ENVIRONMENT: ${{ github.ref }}
+          ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.OSSRH_USERNAME }}
+          ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.OSSRH_PASSWORD }}
+          ORG_GRADLE_PROJECT_signingInMemoryKeyPassword: ${{ secrets.SIGNING_PASSWORD }}
+          ORG_GRADLE_PROJECT_signingInMemoryKey: ${{ secrets.SIGNING_KEY_ARMORED }}
+        run: |
+          npm i https://github.com/dyte-in/gradle-semantic-release-plugin/releases/download/v2.1.2-dyte/gradle-semantic-release-plugin-2.1.2-dyte.tgz @semantic-release/release-notes-generator @semantic-release/git @semantic-release/commit-analyzer @semantic-release/changelog && npx semantic-release

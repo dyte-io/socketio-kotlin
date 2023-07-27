@@ -3,6 +3,10 @@ pluginManagement {
         google()
         gradlePluginPortal()
         mavenCentral()
+        exclusiveContent {
+            forRepository { maven("https://s01.oss.sonatype.org/content/repositories/snapshots") }
+            filter { includeGroupByRegex("io.dyte.*") }
+        }
     }
 }
 

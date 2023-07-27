@@ -1,19 +1,19 @@
 Pod::Spec.new do |spec|
     spec.name                     = 'socketio'
-    spec.version                  = '1.0'
+    spec.version                  = '0.0.1'
     spec.homepage                 = 'Link to the Shared Module homepage'
     spec.source                   = { :http=> ''}
     spec.authors                  = ''
     spec.license                  = ''
     spec.summary                  = 'Some description for the Shared Module'
-    spec.vendored_frameworks      = 'build/cocoapods/framework/socketio.framework'
+    spec.vendored_frameworks      = 'build/cocoapods/framework/dyte_socketio.framework'
     spec.libraries                = 'c++'
     spec.ios.deployment_target = '14.1'
                 
                 
     spec.pod_target_xcconfig = {
         'KOTLIN_PROJECT_PATH' => ':socketio',
-        'PRODUCT_MODULE_NAME' => 'socketio',
+        'PRODUCT_MODULE_NAME' => 'dyte_socketio',
     }
                 
     spec.script_phases = [

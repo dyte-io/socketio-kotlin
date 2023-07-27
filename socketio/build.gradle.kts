@@ -1,12 +1,29 @@
+// Workaround for https://github.com/gradle/gradle/issues/22797, to be fixed in Gradle 8.1
+@file:Suppress("DSL_SCOPE_VIOLATION", "UnstableApiUsage")
+
+import com.vanniktech.maven.publish.JavadocJar
+import com.vanniktech.maven.publish.KotlinMultiplatform
+import com.vanniktech.maven.publish.SonatypeHost
+
 plugins {
     kotlin("multiplatform")
     kotlin("native.cocoapods")
     id("com.android.library")
     kotlin("plugin.serialization") version "1.7.10"
     id("maven-publish")
+    alias(libs.plugins.gradle.maven.publish)
 }
-group = "io.dyte.socketio"
-version = "1.84"
+
+
+mavenPublishing {
+    val isCI = providers.environmentVariable("CI").isPresent
+    publishToMavenCentral(host = SonatypeHost.S01, automaticRelease = true)
+    pomFromGradleProperties()
+    configure(KotlinMultiplatform(javadocJar = JavadocJar.Empty()))
+    if (isCI) {
+        signAllPublications()
+    }
+}
 
 kotlin {
     android {
@@ -23,10 +40,10 @@ kotlin {
     cocoapods {
         summary = "Some description for the Shared Module"
         homepage = "Link to the Shared Module homepage"
-        version = "1.0"
+        version = providers.gradleProperty("VERSION_NAME").get()
         ios.deploymentTarget = "14.1"
         framework {
-            baseName = "socketio"
+            baseName = "dyte_socketio"
         }
     }
 
