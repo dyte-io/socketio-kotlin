@@ -1,13 +1,10 @@
 import io.dyte.socketio.src.Logger
 import io.dyte.socketio.src.engine.EnginePacket
 import io.dyte.socketio.src.engine.Timer
-import io.dyte.socketio.src.engine.types.HandshakeModel
 import io.ktor.http.Parameters
 import io.ktor.http.URLProtocol
 import io.ktor.http.Url
 import io.ktor.http.plus
-import kotlinx.serialization.decodeFromString
-import kotlinx.serialization.json.Json
 
 class EngineSocket : EventEmitter {
 

@@ -71,19 +71,18 @@ sealed class EnginePacket {
     @Serializable
     data class Error(val payload: String) : EnginePacket()
 
-}
-
-
-fun toCharType(a: EnginePacket): Char {
-    return when (a) {
-        is EnginePacket.Open -> '0'
-        is EnginePacket.Close -> '1'
-        is EnginePacket.Ping -> '2'
-        is EnginePacket.Pong -> '3'
-        is EnginePacket.Message -> '4'
-        is EnginePacket.BinaryMessage -> '4'
-        is EnginePacket.Upgrade -> '5'
-        is EnginePacket.Noop -> '6'
-        is EnginePacket.Error -> error("No char type for error")
+    fun toCharType(): Char {
+        return when (this) {
+            is Open -> '0'
+            is Close -> '1'
+            is Ping -> '2'
+            is Pong -> '3'
+            is Message -> '4'
+            is BinaryMessage -> '4'
+            is Upgrade -> '5'
+            is Noop -> '6'
+            is Error -> error("No char type for error")
+        }
     }
+
 }

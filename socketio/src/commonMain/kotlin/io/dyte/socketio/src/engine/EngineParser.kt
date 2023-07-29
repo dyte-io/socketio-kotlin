@@ -1,5 +1,4 @@
 import io.dyte.socketio.src.engine.EnginePacket
-import io.dyte.socketio.src.engine.toCharType
 import io.ktor.util.*
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
@@ -19,7 +18,7 @@ object EnginePacketParser {
         packet: EnginePacket
     ): String {
 
-        var packetType = "${toCharType(packet)}";
+        var packetType = "${packet.toCharType()}";
         return when (packet) {
             is EnginePacket.Message -> {
                 return packetType + (packet.payload ?: "")
