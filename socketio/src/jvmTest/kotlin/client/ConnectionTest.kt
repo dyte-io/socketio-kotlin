@@ -11,16 +11,10 @@ import io.dyte.socketio.src.engine.asJsonObject
 import io.dyte.socketio.src.engine.asString
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
-import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.buildJsonObject
-import kotlinx.serialization.json.intOrNull
-import kotlinx.serialization.json.jsonArray
-import kotlinx.serialization.json.jsonNull
-import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import java.util.concurrent.BlockingQueue
 import java.util.concurrent.LinkedBlockingQueue
@@ -133,6 +127,22 @@ class ConnectionTest : Connection("client") {
         }
         socket.connect()
         assertTrue(values.take() is String)
+        socket.close()
+    }
+
+    @Test(timeout = TIMEOUT.toLong())
+    @Throws(InterruptedException::class)
+    fun workWithFalse() {
+        val values: BlockingQueue<Boolean> = LinkedBlockingQueue()
+        val socket = client()
+        socket.onConnect {
+                socket.emit("echo", false)
+                socket.onEvent("echoBack") { data ->
+                    values.offer(data[0].asBoolean())
+                }
+            }
+        socket.connect()
+        assert(values.take() == false)
         socket.close()
     }
 }

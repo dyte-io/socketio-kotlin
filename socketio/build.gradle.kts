@@ -4,12 +4,13 @@
 import com.vanniktech.maven.publish.JavadocJar
 import com.vanniktech.maven.publish.KotlinMultiplatform
 import com.vanniktech.maven.publish.SonatypeHost
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
     kotlin("multiplatform")
     kotlin("native.cocoapods")
     id("com.android.library")
-    kotlin("plugin.serialization") version "1.7.10"
+    kotlin("plugin.serialization") version "1.9.0"
     id("maven-publish")
     alias(libs.plugins.gradle.maven.publish)
 }
@@ -64,9 +65,9 @@ kotlin {
             androidMain.dependsOn(this)
             dependencies { api(libs.ktor.client.okhttp) }
         }
-        val androidTest by getting
+        val androidUnitTest by getting
         val jvmTest by getting {
-            androidTest.dependsOn(this)
+            androidUnitTest.dependsOn(this)
             dependencies {
                 implementation(libs.kotlin.test.junit)
                 implementation(libs.junit)

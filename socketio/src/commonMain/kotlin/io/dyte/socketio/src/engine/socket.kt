@@ -99,7 +99,7 @@ class EngineSocket : EventEmitter {
          * Protocol version.
          * @api public
          */
-        val protocol = PacketParser.protocol; // this is an int
+        val protocol = EnginePacketParser.protocol; // this is an int
     }
 
     /*
@@ -115,7 +115,7 @@ class EngineSocket : EventEmitter {
 
         query = query.plus(Parameters.build {
             if (query.contains("EIO").not()) {
-                append("EIO", PacketParser.protocol.toString())
+                append("EIO", EnginePacketParser.protocol.toString())
             }
             append("transport", name)
             // session id if we already have one
@@ -201,7 +201,7 @@ class EngineSocket : EventEmitter {
 
         // set up transport listeners
         transport.on("drain", fun(data: Any?) { onDrain() })
-        transport.on("packet", fun(packet) { onPacket(packet as EnginePacket<*>) })
+        transport.on("packet", fun(packet) { onPacket(packet as EnginePacket) })
         transport.on("error", fun(e: Any?) { onError(e) })
         transport.on("close", fun(data: Any?) { onClose("transport close", "") });
     }
@@ -231,13 +231,13 @@ class EngineSocket : EventEmitter {
             Logger.fine("probe transport $name opened");
             transport?.send(
                 listOf(
-                    EnginePacket("ping", "probe")
+                    EnginePacket.Ping("probe")
                 )
             );
             transport?.once("packet", fun(_msg) {
                 if (failed) return;
-                val msg = _msg as EnginePacket<*>;
-                if ("pong" == msg.type && "probe" == msg.data) {
+                val msg = _msg as EnginePacket;
+                if (msg is EnginePacket.Pong && msg.payload == "probe") {
                     Logger.fine("probe transport $name pong");
                     upgrading = true;
                     emit(EVENT_UPGRADING, transport);
@@ -255,7 +255,7 @@ class EngineSocket : EventEmitter {
                             setTransportInternal(transport!!);
                             transport?.send(
                                 listOf(
-                                    EnginePacket("upgrade")
+                                    EnginePacket.Upgrade
                                 )
                             );
                             emit(EVENT_UPGRADE, transport);
@@ -265,7 +265,7 @@ class EngineSocket : EventEmitter {
                         });
                     }
                 } else {
-                    Logger.fine("probe transport ${name} failed");
+                    Logger.fine("probe transport ${name} failed ${msg}");
                     emit(
                         EVENT_UPGRADE_ERROR,
                         mutableMapOf("error" to "probe error", "transport" to transport?.name)
@@ -360,38 +360,40 @@ class EngineSocket : EventEmitter {
     ///
      * @api private
      */
-    fun onPacket(packet: EnginePacket<*>) {
+    fun onPacket(packet: EnginePacket) {
         if ("opening" == readyState || "open" == readyState || "closing" == readyState) {
-            var type = packet.type;
-            var data = packet.data;
-            Logger.fine("socket receive: type $type, data $data");
 
             emit("packet", packet);
 
             // Socket is live - any packet counts
             emit("heartbeat");
 
-            when (type) {
-                "open" -> {
-                    onHandshake(Json.decodeFromString<HandshakeModel>(data as String));
-                }
+            //var type = packet.type;
+            //            var data = packet.data;
 
-                "ping" -> {
+            when (packet) {
+                is EnginePacket.Open -> {
+                    onHandshake(packet);
+                }
+                is EnginePacket.Ping -> {
                     resetPingTimeout();
-                    sendPacket(type = "pong");
+                    sendPacket(EnginePacket.Pong());
                     emit(EVENT_PING);
                 }
-
-                "error" -> {
-//          onError(mapOf("error" to "server error", "code" to data ));
+                is EnginePacket.Error -> {
                     onError("server error");
                 }
-
-                "message" -> {
+                is EnginePacket.Message -> {
                     Logger.fine("onMessage enginesocket");
-                    emit("data", data);
-                    emit(EVENT_MESSAGE, data);
+                    emit("data", packet.payload);
+                    emit(EVENT_MESSAGE, packet.payload);
                 }
+                is EnginePacket.BinaryMessage -> {
+                    Logger.fine("onMessage enginesocket");
+                    emit("data", packet.payload);
+                    emit(EVENT_MESSAGE, packet.payload);
+                }
+                else -> {}
             }
         } else {
             Logger.fine("packet received with socket readyState $readyState");
@@ -417,7 +419,7 @@ class EngineSocket : EventEmitter {
      * @param {Object} handshake obj
      * @api private
      */
-    fun onHandshake(data: HandshakeModel) {
+    fun onHandshake(data: EnginePacket.Open) {
         emit(EVENT_HANDSHAKE, data);
         Logger.fine("handshake");
         id = data.sid;
@@ -426,8 +428,8 @@ class EngineSocket : EventEmitter {
         });
 
         upgrades = filterUpgrades(data.upgrades);
-        pingInterval = data.pingInterval
-        pingTimeout = data.pingTimeout
+        pingInterval = data.pingInterval.toLong()
+        pingTimeout = data.pingTimeout.toLong()
         onOpen();
         // In case open handler closes socket
         if ("closed" == readyState) return;
@@ -493,7 +495,7 @@ class EngineSocket : EventEmitter {
             // keep track of current length of writeBuffer
             // splice writeBuffer and callbackBuffer on `drain`
             prevBufferLen = writeBuffer.size;
-            transport?.send(writeBuffer.toList() as List<EnginePacket<Any>>);
+            transport?.send(writeBuffer.toList() as List<EnginePacket>);
             emit("flush");
         }
     }
@@ -516,12 +518,12 @@ class EngineSocket : EventEmitter {
     fun send(
         msg: String, callback: ((data: Any?) -> Unit)? = null
     ): EngineSocket {
-        sendPacket(type = "message", data = msg, callback = callback);
+        sendPacket(EnginePacket.Message(msg), callback = callback);
         return this;
     }
 
     fun send(msg: ByteArray, callback: ((data: Any?) -> Unit)? = null) {
-        sendPacket(type = "message", data = msg, callback = callback);
+        sendPacket(EnginePacket.BinaryMessage(msg), callback = callback);
     }
 
     /**
@@ -534,43 +536,20 @@ class EngineSocket : EventEmitter {
      * @api private
      */
     fun sendPacket(
-        type: String, data: String = "", callback: ((data: Any?) -> Unit)? = null
+        packet: EnginePacket, callback: ((data: Any?) -> Unit)? = null
     ) {
         if ("closing" == readyState || "closed" == readyState) {
             return;
         }
-        var packet = EnginePacket(type, data);
         emit(EVENT_PACKET_CREATE, packet);
         writeBuffer.add(packet);
         if (callback != null) once("flush", callback);
         flush();
     }
 
-    /**
-     * Sends a packet.
-    ///
-     * @param {String} packet type.
-     * @param {String} data.
-     * @param {Object} options.
-     * @param {Function} callback function.
-     * @api private
-     */
-    fun sendPacket(
-        type: String, data: ByteArray, callback: ((data: Any?) -> Unit)? = null
-    ) {
-        if ("closing" == readyState || "closed" == readyState) {
-            return;
-        }
-        var packet = EnginePacket(type, data);
-        emit(EVENT_PACKET_CREATE, packet);
-        writeBuffer.add(packet);
-        if (callback != null) once("flush", callback);
-        flush();
-    }
 
     /**
      * Closes the connection.
-    ///
      * @api private
      */
     fun close(): EngineSocket {

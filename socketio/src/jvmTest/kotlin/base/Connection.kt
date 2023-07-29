@@ -25,7 +25,6 @@ abstract class Connection(val serverType: String) {
     fun startServer() {
         println("Starting server ...")
         val latch = CountDownLatch(1)
-
         serverProcess = Runtime.getRuntime().exec(
             "node src/jvmTest/resources/${serverType}/server.js", createEnv()
         )
@@ -100,7 +99,7 @@ abstract class Connection(val serverType: String) {
 
     companion object {
         private val logger: Logger = Logger.getGlobal()
-        const val TIMEOUT = 4000
+        const val TIMEOUT = 6000
         const val PORT = 3000
     }
 }

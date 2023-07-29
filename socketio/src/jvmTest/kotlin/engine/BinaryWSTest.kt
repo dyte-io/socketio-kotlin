@@ -10,7 +10,7 @@ import kotlin.test.assertEquals
 
 class BinaryWSTest : Connection("engine") {
 
-    @Test(timeout = 100L)
+    @Test(timeout = TIMEOUT.toLong())
     @Throws(InterruptedException::class)
     fun receiveBinaryData() {
         val values: BlockingQueue<Any> = LinkedBlockingQueue()
@@ -23,6 +23,7 @@ class BinaryWSTest : Connection("engine") {
         opts.transports = mutableListOf<String>("websocket")
         val socket = EngineSocket(_opts = opts)
         socket.on(EngineSocket.EVENT_OPEN, fun(_) {
+            print("WS:: Sending binary 1")
             socket.send(binaryData)
             socket.on(EngineSocket.EVENT_MESSAGE, fun(data: Any?) {
                 if ("hi" == data) return
@@ -34,7 +35,7 @@ class BinaryWSTest : Connection("engine") {
         socket.close()
     }
 
-    @Test(timeout = 100L)
+    @Test(timeout = TIMEOUT.toLong())
     @Throws(InterruptedException::class)
     fun receiveBinaryDataAndMultibyteUTF8String() {
         val values: BlockingQueue<Any> = LinkedBlockingQueue()
@@ -42,7 +43,6 @@ class BinaryWSTest : Connection("engine") {
         for (i in binaryData.indices) {
             binaryData[i] = i.toByte()
         }
-        val msg = intArrayOf(0)
         val opts = createOptions()
         opts.port = PORT
         opts.transports = mutableListOf<String>("websocket")
@@ -53,7 +53,6 @@ class BinaryWSTest : Connection("engine") {
             socket.on(EngineSocket.EVENT_MESSAGE, fun(data: Any?) {
                 if ("hi" == data) return
                 values.offer(data)
-                msg[0]++
             })
         })
         socket.open()

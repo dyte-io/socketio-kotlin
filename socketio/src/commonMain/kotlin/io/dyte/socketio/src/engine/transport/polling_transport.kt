@@ -90,29 +90,23 @@ abstract class PollingTransport: Transport {
     * Overloads onData to detect payloads.
     * @api private
   */
-  override fun onData(data: Any) {
+  override fun onData(data: String) {
     var self = this;
     Logger.fine("polling got data $data");
-    var callback = fun (packet: EnginePacket<*>) {
-      Logger.fine("callback poll_transport onData");
+
+    // decode payload
+    EnginePacketParser.deserializeMultiplePacket(data as String).forEach {
       // if its the first message we consider the transport open
       if ("opening" == self.readyState) {
         self.onOpen();
       }
-
-      // if its a close packet, we close the ongoing requests
-      if ("close" == packet.type) {
-        self.onClose();
-        return;
+      when (it) {
+        is EnginePacket.Close -> self.onClose()
+        else -> {
+          self.onPacket(it);
+        }
       }
-
-      // otherwise bypass onData and handle the message
-      self.onPacket(packet);
-      return;
-    };
-
-    // decode payload
-    PacketParser.decodePayload(data as String).forEach(callback);
+    }
 
     // if an event did not trigger closing
     if ("closed" != readyState) {
@@ -138,8 +132,8 @@ abstract class PollingTransport: Transport {
     var _close = fun (data: Any?)  {
       Logger.fine("writing close packet");
       self.write(
-        listOf(EnginePacket("close")
-      ));
+        listOf(EnginePacket.Close)
+      );
     };
 
     if ("open" == readyState) {
@@ -159,7 +153,7 @@ abstract class PollingTransport: Transport {
     * @param {Function} drain callback
     * @api private
   */
-  override fun write(packets: List<EnginePacket<Any>>) {
+  override fun write(packets: List<EnginePacket>) {
     var self = this;
     writable = false;
     var callbackfn = fun(data: Any?) {
@@ -167,9 +161,8 @@ abstract class PollingTransport: Transport {
       self.emit("drain");
     };
 
-    PacketParser.encodePayload(packets, callback= fun (data) {
-      self.doWrite(data, callbackfn);
-    });
+    val serialized = EnginePacketParser.serializeMultiplePacket(packets)
+    self.doWrite(serialized, callbackfn);
   }
 
   /**

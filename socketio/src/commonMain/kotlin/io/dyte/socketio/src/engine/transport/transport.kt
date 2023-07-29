@@ -88,7 +88,7 @@ abstract class Transport: EventEmitter {
    * @api private
   // TOOD List<*>
   */
-  fun send(packets: List<EnginePacket<Any>>) {
+  fun send(packets: List<EnginePacket>) {
     if ("open" == readyState) {
       write(packets);
     } else {
@@ -114,16 +114,16 @@ abstract class Transport: EventEmitter {
    * @param {String} data
    * @api private
   */
-  open fun onData(data: Any) {
+  open fun onData(data: String) {
     Logger.fine("onData $name $data ")
-    var packet = PacketParser.decodePacket(data);
+    var packet = EnginePacketParser.deserializePacket(data);
     onPacket(packet);
   }
 
   /**
    * Called with a decoded packet.
   */
-  fun onPacket(packet: EnginePacket<*>) {
+  fun onPacket(packet: EnginePacket) {
     emit("packet", packet);
   }
 
@@ -138,7 +138,7 @@ abstract class Transport: EventEmitter {
     emit("close");
   }
 
-  abstract fun write(data: List<EnginePacket<Any>>);
+  abstract fun write(data: List<EnginePacket>);
   abstract fun doOpen();
   abstract fun doClose();
 }

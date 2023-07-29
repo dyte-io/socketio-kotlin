@@ -1,6 +1,6 @@
 package io.dyte.socketio.src.engine.types
 
-import kotlinx.serialization.Serializable
+import kotlinx.serialization.*
 
 @Serializable
 data class HandshakeModel (

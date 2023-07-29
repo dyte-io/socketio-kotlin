@@ -121,7 +121,9 @@ class SocketClient(io: Manager, nsp: String, opts: ManagerOptions): EventEmitter
     }
 
     fun onEvent(event: String, callback: (data: ArrayList<JsonElement>) -> Unit) {
-        on(event, callback as (Any?) -> Unit);
+        onEvent(event, fun (data: ArrayList<JsonElement>, ack: ACKFn) {
+            callback(data);
+        });
     }
 
     fun onEvent(event: String, callback: (data: ArrayList<JsonElement>, ack: ACKFn) -> Unit) {
@@ -344,7 +346,10 @@ class SocketClient(io: Manager, nsp: String, opts: ManagerOptions): EventEmitter
 //      debug("attaching ack callback to event");
             args.add(ack(packet.id));
         }
-        Logger.fine("onEvent ${args.first()} ${args.size} $connected");
+        Logger.fine("onEvent size ${args.size} $connected");
+        args.forEach {
+            Logger.fine("onEvent ${it}");
+        }
         if (connected == true) {
             try {
                 super.emit(args.first().toString().removePrefix("\"").removeSuffix("\""), ArrayList(args.subList(1, args.size)));

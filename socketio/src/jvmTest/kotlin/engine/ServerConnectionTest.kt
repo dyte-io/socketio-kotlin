@@ -4,6 +4,7 @@ import EngineSocket
 import SocketClient
 import Transport
 import base.Connection
+import io.dyte.socketio.src.engine.EnginePacket
 import io.dyte.socketio.src.engine.types.HandshakeModel
 import java.net.URISyntaxException
 import java.util.concurrent.BlockingQueue
@@ -68,7 +69,7 @@ class ServerConnectionTest : Connection("engine") {
             values.offer(data)
         })
         socket.open()
-        val data = values.take() as HandshakeModel
+        val data = values.take() as EnginePacket.Open
         assert(data.sid != null)
         assert(data.upgrades.isNotEmpty())
         assert(data.pingTimeout > 0L)

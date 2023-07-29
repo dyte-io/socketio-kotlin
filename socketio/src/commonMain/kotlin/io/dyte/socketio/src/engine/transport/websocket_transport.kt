@@ -13,6 +13,8 @@ class WebSocketTransport : Transport {
     override var name = "websocket"
 //  var protocols: MutableList<String>?;
 
+    val serialScope = CoroutineScope(newSingleThreadContext("WSScope${hashCode()}"))
+
     override var supportsBinary: Boolean
 
     //  lateinit var perMessageDeflate: MutableMap<String, Any>;
@@ -101,7 +103,7 @@ class WebSocketTransport : Transport {
     ///
     /// @param {Array} array of packets.
     /// @api private
-    override fun write(packets: List<EnginePacket<Any>>) {
+    override fun write(packets: List<EnginePacket>) {
         writable = false
 
         var done = fun() {
@@ -114,84 +116,87 @@ class WebSocketTransport : Transport {
         // no need for encodePayload
         packets.forEach {
             val packet = it
-            PacketParser.encodePacket(packet,
-                supportsBinary, callback = fun(data) {
-                    // Sometimes the websocket has already been closed but the browser didn"t
-                    // have a chance of informing us about it yet, in that case send will
-                    // throw an error
-                    try {
-                        scope!!.launch {
+            // Sometimes the websocket has already been closed but the browser didn"t
+            // have a chance of informing us about it yet, in that case send will
+            // throw an error
+            try {
+                serialScope.launch {
+//                    if (it is EnginePacket.BinaryMessage) {
+//                        print("WS::Binary message ${it.payload}")
+//                        ws?.send(it.payload)
+//                    } else  {
+                        val data = EnginePacketParser.serializePacket(packet)
+                        ws?.send(data)
+//                     }
+                }
+            } catch (e: Error) {
+                Logger.fine("websocket closed before onclose event")
+            }
 
-                            if(data is String) {
-                                ws?.send(data)
-                            } else if (data is ByteArray) {
-                                ws?.send(data)
-                            }
-                        }
-                    } catch (e: Error) {
-                        Logger.fine("websocket closed before onclose event")
-                    }
+            if (--total == 0) done()
 
-                    if (--total == 0) done()
+    }
+}
 
-                })
-        }
+/// Closes socket.
+///
+/// @api private
+
+override fun doClose() {
+    runBlocking {
+        ws?.close()
+    }
+}
+
+/// Generates uri for connection.
+///
+/// @api private
+fun uri(): String {
+    var query = this.query //TODO: or else
+    var schema = if (secure) "wss" else "ws"
+    var port = ""
+
+    // afun port if default for schema
+    if (this.port > 0 &&
+        (("wss" == schema && this.port != 443) ||
+                ("ws" == schema && this.port != 80))
+    ) {
+        port = ":${this.port}"
     }
 
-    /// Closes socket.
-    ///
-    /// @api private
-
-    override fun doClose() {
-        runBlocking {
-            ws?.close()
-        }
+    // cache busting is forced
+    if (timestampRequests) {
+        query = query.plus(
+            Parameters.build {
+                append(
+                    timestampParam as String,
+                    GMTDate().timestamp.toString(36)
+                );
+            })
     }
 
-    /// Generates uri for connection.
-    ///
-    /// @api private
-    fun uri(): String {
-        var query = this.query //TODO: or else
-        var schema = if (secure) "wss" else "ws"
-        var port = ""
-
-        // afun port if default for schema
-        if (this.port > 0 &&
-            (("wss" == schema && this.port != 443) ||
-                    ("ws" == schema && this.port != 80))
-        ) {
-            port = ":${this.port}"
-        }
-
-        // cache busting is forced
-        if (timestampRequests) {
-            query = query.plus(
-                Parameters.build { append(timestampParam as String, GMTDate().timestamp.toString(36)); })
-        }
-
-        if (supportsBinary == false) {
-            query = query.plus(
-                Parameters.build { append("b64", "1") }
-            )
-        }
-
-
-        var queryString = query.formUrlEncode()
-
-        // prepend ? to query
-        if (queryString.isNotEmpty()) {
-            queryString = "?$queryString"
-        }
-
-        println("XX: $queryString")
-
-        var ipv6 = hostname.contains(":");
-        return schema +
-                "://" +
-                (if(ipv6) "[" + hostname + "]" else hostname) +
-                port +
-                path +
-                queryString
+    if (supportsBinary == false) {
+        query = query.plus(
+            Parameters.build { append("b64", "1") }
+        )
     }
+
+
+    var queryString = query.formUrlEncode()
+
+    // prepend ? to query
+    if (queryString.isNotEmpty()) {
+        queryString = "?$queryString"
+    }
+
+    println("XX: $queryString")
+
+    var ipv6 = hostname.contains(":");
+    return schema +
+            "://" +
+            (if (ipv6) "[" + hostname + "]" else hostname) +
+            port +
+            path +
+            queryString
+}
 }
