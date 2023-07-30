@@ -13,7 +13,7 @@ const baseConfig = {
             }
         ],
     ],
-    repositoryUrl: 'https://github.com/dyte-in/sockrates-client-kmm'
+    repositoryUrl: 'https://github.com/dyte-in/socket-io-client-kmp'
 };
 
 const mainConfig = {
