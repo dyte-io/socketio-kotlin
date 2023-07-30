@@ -7,9 +7,9 @@ import kotlin.io.encoding.ExperimentalEncodingApi
 
 object EnginePacketParser {
 
-    val protocol = 4;
+    val protocol = 4
 
-    val SEPARATOR = (30).toChar();
+    val SEPARATOR = (30).toChar()
 
     val ERROR_PACKET = EnginePacket.Error("parser error")
 
@@ -18,7 +18,7 @@ object EnginePacketParser {
         packet: EnginePacket
     ): String {
 
-        var packetType = "${packet.toCharType()}";
+        var packetType = "${packet.toCharType()}"
         return when (packet) {
             is EnginePacket.Message -> {
                 return packetType + (packet.payload ?: "")
@@ -40,12 +40,12 @@ object EnginePacketParser {
     @OptIn(ExperimentalEncodingApi::class)
     fun deserializePacket(encodedPacket: String?): EnginePacket {
         if (encodedPacket == null || encodedPacket.isEmpty()) {
-            return ERROR_PACKET;
+            return ERROR_PACKET
         }
 
         var payload: String? = encodedPacket.drop(1)
         if(payload?.isEmpty() == true) {
-            payload = null;
+            payload = null
         }
         return when (val packetType = encodedPacket[0]) {
             '0' -> Json.decodeFromString<EnginePacket.Open>(payload!!)
@@ -74,16 +74,16 @@ object EnginePacketParser {
     fun deserializeMultiplePacket(
         encodedPayload: String,
     ): MutableList<EnginePacket> {
-        var encodedPackets = encodedPayload.split(SEPARATOR);
-        var packets = mutableListOf<EnginePacket>();
+        var encodedPackets = encodedPayload.split(SEPARATOR)
+        var packets = mutableListOf<EnginePacket>()
         for (i in 0..(encodedPackets.size - 1)) {
-            var decodedPacket = deserializePacket(encodedPackets[i]);
-            packets.add(decodedPacket);
+            var decodedPacket = deserializePacket(encodedPackets[i])
+            packets.add(decodedPacket)
             if (decodedPacket is EnginePacket.Error) {
-                break;
+                break
             }
         }
-        return packets;
+        return packets
     }
 
 }

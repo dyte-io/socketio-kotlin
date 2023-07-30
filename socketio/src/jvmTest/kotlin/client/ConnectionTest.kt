@@ -228,7 +228,7 @@ class ConnectionTest : Connection("client") {
         val socket = client()
         socket.once(SocketClient.EVENT_CONNECT, fun (_) {
                 socket.disconnect()
-            });
+            })
         socket.once(SocketClient.EVENT_DISCONNECT, fun (_){
                 socket.io.on(Manager.EVENT_RECONNECT, fun (_) {
                         socket.disconnect()
@@ -290,12 +290,12 @@ class ConnectionTest : Connection("client") {
         val startTime = longArrayOf(0)
         val prevDelay = longArrayOf(0)
         manager.on(Manager.EVENT_ERROR, fun (_){
-            startTime[0] = Date().getTime()
+            startTime[0] = Date().time
         })
         manager.on(Manager.EVENT_RECONNECT_ATTEMPT, fun (_) {
                 print("----EVENT_RECONNECT_ATTEMPT")
                 reconnects[0]++
-                val currentTime = Date().getTime()
+                val currentTime = Date().time
                 val delay = currentTime - startTime[0]
                 if (delay <= prevDelay[0]) {
                     increasingDelay[0] = false

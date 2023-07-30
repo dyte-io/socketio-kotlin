@@ -19,13 +19,13 @@ import kotlinx.serialization.json.jsonPrimitive
  */
 class ClientParser {
     companion object {
-        val CONNECT = 0;
-        val DISCONNECT = 1;
-        val EVENT = 2;
-        val ACK = 3;
-        val CONNECT_ERROR = 4;
-        val BINARY_EVENT = 5;
-        val BINARY_ACK = 6;
+        val CONNECT = 0
+        val DISCONNECT = 1
+        val EVENT = 2
+        val ACK = 3
+        val CONNECT_ERROR = 4
+        val BINARY_EVENT = 5
+        val BINARY_ACK = 6
 
         val packetTypes: List<String> = listOf(
             "CONNECT",
@@ -35,7 +35,7 @@ class ClientParser {
             "CONNECT_ERROR",
             "BINARY_EVENT",
             "BINARY_ACK"
-        );
+        )
     }
 }
 
@@ -51,7 +51,7 @@ class ClientEncoder {
      * @api public
      */
     fun encode(obj: ClientPacket<*>): List<Any> {
-        Logger.fine("encoding packet $obj");
+        Logger.fine("encoding packet $obj")
 
         if (ClientParser.EVENT == obj.type || ClientParser.ACK == obj.type) {
 //      if (hasBinary(obj)) {
@@ -59,7 +59,7 @@ class ClientEncoder {
 //        return encodeAsBinary(obj);
 //      }
         }
-        return listOf(encodeAsString(obj));
+        return listOf(encodeAsString(obj))
     }
 
     companion object {
@@ -73,39 +73,39 @@ class ClientEncoder {
          */
         fun encodeAsString(obj: ClientPacket<*>): String {
             // first is type
-            var str = "${obj.type}";
+            var str = "${obj.type}"
 
             // attachments if we have them
             if (ClientParser.BINARY_EVENT == obj.type || ClientParser.BINARY_ACK == obj.type) {
-                str += "${obj.attachments}-";
+                str += "${obj.attachments}-"
             }
 
             // if we have a namespace other than `/`
             // we append it followed by a comma `,`
             if (obj.nsp != null && "/" != obj.nsp) {
-                str += obj.nsp as String + ",";
+                str += obj.nsp as String + ","
             }
 
             // immediately followed by the id
             if (obj.id >= 0) {
-                str += "${obj.id}";
+                str += "${obj.id}"
             }
 
             // json data
             if (obj.data != null) {
                 if (obj.data is JsonObject) {
-                    str += Json.encodeToString(obj.data as JsonObject);
+                    str += Json.encodeToString(obj.data as JsonObject)
                 } else if (obj.data is JsonArray) {
-                    str += Json.encodeToString(obj.data as JsonArray);
+                    str += Json.encodeToString(obj.data as JsonArray)
                 } else if (obj.data is List<*>) {
-                    str += Json.encodeToString(obj.data as List<JsonElement>);
+                    str += Json.encodeToString(obj.data as List<JsonElement>)
                 } else {
                     Logger.fine("Error: encode type not found ${obj.data}")
                 }
             }
 
-            Logger.fine("encoded $obj as $str");
-            return str;
+            Logger.fine("encoded $obj as $str")
+            return str
         }
 
         /**
@@ -147,9 +147,9 @@ class ClientDecoder : EventEmitter() {
      * @api public
      */
     fun add(obj: Any) {
-        var packet: ClientPacket<Any>;
+        var packet: ClientPacket<Any>
         if (obj is String) {
-            packet = decodeString(obj);
+            packet = decodeString(obj)
             if (ClientParser.BINARY_EVENT == packet.type || ClientParser.BINARY_ACK == packet.type) {
                 // binary packet"s json
 //        this.reconstructor = new BinaryReconstructor(packet);
@@ -160,8 +160,8 @@ class ClientDecoder : EventEmitter() {
 //        }
             } else {
                 // non-binary full packet
-                Logger.fine("decoded");
-                this.emit("decoded", packet);
+                Logger.fine("decoded")
+                this.emit("decoded", packet)
             }
 //    } else if (isBinary(obj) || obj is Map && obj["base64"] != null) {
 //      // raw binary data
@@ -191,71 +191,71 @@ class ClientDecoder : EventEmitter() {
          */
 
         fun decodeString(str: String): ClientPacket<Any> {
-            var i = 0;
-            var endLen = str.length - 1;
+            var i = 0
+            var endLen = str.length - 1
             // look up type
-            val type = str[0].digitToInt();
+            val type = str[0].digitToInt()
             var p = ClientPacket<Any>(type)
 
             if (null == ClientParser.packetTypes[type]) {
-                throw UnsupportedOperationException("unknown packet type " + p.type);
+                throw UnsupportedOperationException("unknown packet type " + p.type)
             }
 
             // look up attachments if type binary
             if (ClientParser.BINARY_EVENT == p.type || ClientParser.BINARY_ACK == p.type) {
                 if (!str.contains("-") || str.length <= i + 1) {
-                    throw UnsupportedOperationException("illegal attachments");
+                    throw UnsupportedOperationException("illegal attachments")
                 }
-                var attachments = "";
+                var attachments = ""
                 while (str[++i] != '-') {
-                    attachments += str[i];
+                    attachments += str[i]
                 }
                 p.attachments = attachments.toInt()
             }
 
             // look up namespace (if any)
             if (i < endLen - 1 && '/' == str[i + 1]) {
-                var start = i + 1;
+                var start = i + 1
                 while (++i > 0) {
-                    if (i == str.length) break;
-                    var c = str[i];
-                    if (',' == c) break;
+                    if (i == str.length) break
+                    var c = str[i]
+                    if (',' == c) break
                 }
-                p.nsp = str.substring(start, i);
+                p.nsp = str.substring(start, i)
             } else {
-                p.nsp = "/";
+                p.nsp = "/"
             }
 
             // look up id
-            var next: String? = if (i < endLen - 1) str[i + 1].toString() else null;
+            var next: String? = if (i < endLen - 1) str[i + 1].toString() else null
             if (next?.isNotEmpty() == true && "${next.toIntOrNull()}" == next) {
-                var start = i + 1;
+                var start = i + 1
                 while (++i > 0) {
-                    var c: String? = if (str.length > i) str[i].toString() else null;
+                    var c: String? = if (str.length > i) str[i].toString() else null
                     try {
                         if ("${c?.toInt()}" != c) {
-                            --i;
-                            break;
+                            --i
+                            break
                         }
                     } catch (e: Exception) {
-                        --i;
-                        break;
+                        --i
+                        break
                     }
-                    if (i == str.length) break;
+                    if (i == str.length) break
                 }
-                p.id = str.substring(start, i + 1).toInt();
+                p.id = str.substring(start, i + 1).toInt()
             }
 
             // look up json data
             if (i < endLen - 1 && str[++i].toString().isNotEmpty() == true) {
-                var payload = tryParse(p.type, str.substring(i));
-                p.data = payload;
+                var payload = tryParse(p.type, str.substring(i))
+                p.data = payload
                 if (isPayloadValid(p.type, p.data as Any).not()) {
-                    throw UnsupportedOperationException("invalid payload");
+                    throw UnsupportedOperationException("invalid payload")
                 }
             }
 
-            return p;
+            return p
         }
 
         fun tryParse(type: Int, str: String): Any {
@@ -264,25 +264,27 @@ class ClientDecoder : EventEmitter() {
                 when (type) {
                     ClientParser.EVENT, ClientParser.ACK -> return Json.decodeFromString<JsonArray>(
                         str
-                    );
-                    else -> return Json.decodeFromString<JsonObject>(str);
+                    )
+
+                    else -> return Json.decodeFromString<JsonObject>(str)
                 }
             } catch (e: Exception) {
-                Logger.fine("JSON Error ${e}");
+                Logger.fine("JSON Error ${e}")
             }
             return mapOf<String, JsonElement>()
         }
 
         fun isPayloadValid(type: Int, payload: Any): Boolean {
             when (type) {
-                ClientParser.CONNECT -> return payload is JsonObject;
-                ClientParser.DISCONNECT -> return payload == null;
+                ClientParser.CONNECT -> return payload is JsonObject
+                ClientParser.DISCONNECT -> return payload == null
                 ClientParser.CONNECT_ERROR -> return payload is JsonObject
                 ClientParser.EVENT, ClientParser.BINARY_EVENT ->
                         return payload is JsonArray
                         && payload.size > 0
-                        && payload.getOrNull(0)?.isNull() == false;
-                ClientParser.ACK, ClientParser.BINARY_ACK -> return payload is JsonArray;
+                        && payload.getOrNull(0)?.isNull() == false
+
+                ClientParser.ACK, ClientParser.BINARY_ACK -> return payload is JsonArray
             }
             return false
         }

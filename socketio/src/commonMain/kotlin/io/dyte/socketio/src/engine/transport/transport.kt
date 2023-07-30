@@ -3,45 +3,45 @@ import io.dyte.socketio.src.engine.EnginePacket
 import io.ktor.http.*
 
 abstract class Transport: EventEmitter {
-  lateinit var path: String;
-  var hostname: String;
-  var port: Int = -1;
-  var secure: Boolean = true;
-  var query: Parameters = Parameters.Empty;
-  var timestampParam: String? ;
-  var timestampRequests: Boolean = false;
-  var extraHeaders: MutableMap<String, String>? = null;
+  lateinit var path: String
+    var hostname: String
+    var port: Int = -1
+    var secure: Boolean = true
+    var query: Parameters = Parameters.Empty
+    var timestampParam: String?
+    var timestampRequests: Boolean = false
+    var extraHeaders: MutableMap<String, String>? = null
 
-  var readyState: String?;
-  var agent: Boolean = false;
-  var socket: EngineSocket?;
-  var enablesXDR: Boolean? ;
-  var writable: Boolean = true;
-  open var name: String = "";
-  open var supportsBinary: Boolean = false;
-  var requestTimeout: Long = 2000L;
+    var readyState: String?
+    var agent: Boolean = false
+    var socket: EngineSocket?
+    var enablesXDR: Boolean?
+    var writable: Boolean = true
+    open var name: String = ""
+    open var supportsBinary: Boolean = false
+    var requestTimeout: Long = 2000L
 
 
-  constructor(opts: TransportOptions, socket: EngineSocket?)
+    constructor(opts: TransportOptions, socket: EngineSocket?)
   {
-    if(opts.path != null) path = opts.path!!;
-    if(opts.port != null) port = opts.port!!;
-    if(opts.secure != null) secure = opts.secure!!;
-    if(opts.query != null) query = opts.query!!;
-    if(opts.agent != null) agent = opts.agent!!;
-    if(opts.requestTimeout != null) requestTimeout = opts.requestTimeout!!;
-    hostname = opts.hostname.toString();
-    timestampParam = opts.timestampParam;
-    timestampRequests = opts.timestampRequests;
-    readyState = "";
-    extraHeaders = opts.extraHeaders;
+    if(opts.path != null) path = opts.path!!
+      if(opts.port != null) port = opts.port
+      if(opts.secure != null) secure = opts.secure
+      if(opts.query != null) query = opts.query!!
+      if(opts.agent != null) agent = opts.agent!!
+      if(opts.requestTimeout != null) requestTimeout = opts.requestTimeout!!
+      hostname = opts.hostname.toString()
+      timestampParam = opts.timestampParam
+      timestampRequests = opts.timestampRequests
+      readyState = ""
+      extraHeaders = opts.extraHeaders
 
-    this.socket = socket;
-    enablesXDR = opts.enablesXDR;
+      this.socket = socket
+      enablesXDR = opts.enablesXDR
   }
 
   companion object {
-    val EVENT_RESPONSE_HEADERS = "responseHeaders";
+    val EVENT_RESPONSE_HEADERS = "responseHeaders"
   }
 
   /**
@@ -52,7 +52,7 @@ abstract class Transport: EventEmitter {
    * @api public
   */
   fun onError(msg: String, desc: String) {
-    emit("error" , mapOf<String, String>("msg" to msg, "desc" to desc, "type" to "TransportError"));
+    emit("error" , mapOf<String, String>("msg" to msg, "desc" to desc, "type" to "TransportError"))
   }
 
   /**
@@ -64,8 +64,8 @@ abstract class Transport: EventEmitter {
     Logger.fine("open0 $name")
     if ("closed" == readyState || "" == readyState) {
       Logger.fine("open $name")
-      readyState = "opening";
-      doOpen();
+      readyState = "opening"
+        doOpen()
     }
   }
 
@@ -76,8 +76,8 @@ abstract class Transport: EventEmitter {
   */
   fun close() {
     if ("opening" == readyState || "open" == readyState) {
-      doClose();
-      onClose();
+      doClose()
+        onClose()
     }
   }
 
@@ -90,9 +90,9 @@ abstract class Transport: EventEmitter {
   */
   fun send(packets: List<EnginePacket>) {
     if ("open" == readyState) {
-      write(packets);
+      write(packets)
     } else {
-      throw IllegalStateException("Transport not open");
+      throw IllegalStateException("Transport not open")
     }
   }
 
@@ -102,10 +102,10 @@ abstract class Transport: EventEmitter {
    * @api private
   */
   fun onOpen() {
-    readyState = "open";
-    Logger.fine("readyState $name $readyState")
-    writable = true;
-    emit("open");
+    readyState = "open"
+      Logger.fine("readyState $name $readyState")
+    writable = true
+      emit("open")
   }
 
   /**
@@ -116,15 +116,15 @@ abstract class Transport: EventEmitter {
   */
   open fun onData(data: String) {
     Logger.fine("onData $name $data ")
-    var packet = EnginePacketParser.deserializePacket(data);
-    onPacket(packet);
+    var packet = EnginePacketParser.deserializePacket(data)
+      onPacket(packet)
   }
 
   /**
    * Called with a decoded packet.
   */
   fun onPacket(packet: EnginePacket) {
-    emit("packet", packet);
+    emit("packet", packet)
   }
 
   /**
@@ -133,35 +133,36 @@ abstract class Transport: EventEmitter {
    * @api private
   */
   fun onClose() {
-    readyState = "closed";
-    Logger.fine("readyState $readyState $name")
-    emit("close");
+    readyState = "closed"
+      Logger.fine("readyState $readyState $name")
+    emit("close")
   }
 
-  abstract fun write(data: List<EnginePacket>);
-  abstract fun doOpen();
-  abstract fun doClose();
+  abstract fun write(data: List<EnginePacket>)
+    abstract fun doOpen()
+    abstract fun doClose()
 }
 
 open class TransportOptions {
-  var agent: Boolean? = null;
-  var hostname: String? = null;
-  var port: Int = -1;
-  var path: String? = null;
-  var secure: Boolean = false;
-  var query: Parameters? = null;
-  var timestampParam: String? = null;
-  var timestampRequests: Boolean = false;
+  var agent: Boolean? = null
+    var hostname: String? = null
+    var port: Int = -1
+    var path: String? = null
+    var secure: Boolean = false
+    var query: Parameters? = null
+    var timestampParam: String? = null
+    var timestampRequests: Boolean = false
 
-  var upgrade: Boolean? = true;
-  var forceJSONP: Boolean? = null;
-  var jsonp: Boolean? = null;
-  var forceBase64: Boolean? = null;
-  var enablesXDR: Boolean? = null;
-  var extraHeaders: MutableMap<String, String>? = null;
-  // TODO: ununsed ?
-  var policyPort: Int = -1;
-  var requestTimeout: Long? = null;
-  var probe: Boolean? = null;
-  var autoConnect: Boolean? = null;
+    var upgrade: Boolean? = true
+    var forceJSONP: Boolean? = null
+    var jsonp: Boolean? = null
+    var forceBase64: Boolean? = null
+    var enablesXDR: Boolean? = null
+    var extraHeaders: MutableMap<String, String>? = null
+
+    // TODO: ununsed ?
+  var policyPort: Int = -1
+    var requestTimeout: Long? = null
+    var probe: Boolean? = null
+    var autoConnect: Boolean? = null
 }

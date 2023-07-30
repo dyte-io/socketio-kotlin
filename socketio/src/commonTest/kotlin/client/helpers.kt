@@ -17,19 +17,19 @@ class helpers {
         val encoder = ClientEncoder()
         fun test(obj: ClientPacket<*>) {
             val encodedPackets = encoder.encode(obj)
-            val decoder = ClientDecoder();
+            val decoder = ClientDecoder()
             decoder.on("decoded", fun(p: Any?) {
-                val p = p as ClientPacket<*>;
-                assertPacket(obj, p);
-            });
-            decoder.add(encodedPackets[0]);
+                val p = p as ClientPacket<*>
+                assertPacket(obj, p)
+            })
+            decoder.add(encodedPackets[0])
         }
 
 
         fun testDecodeError(errorMessage: String) {
-            val decoder = ClientDecoder();
+            val decoder = ClientDecoder()
             try {
-                decoder.add(errorMessage);
+                decoder.add(errorMessage)
                 assertTrue(false)
             } catch (e: Exception) {
 
@@ -37,31 +37,31 @@ class helpers {
         }
 
         fun testBin(obj: ClientPacket<Any>) {
-            val originalData = obj.data;
+            val originalData = obj.data
             val encodedPackets = encoder.encode(obj)
-            val decoder = ClientDecoder();
+            val decoder = ClientDecoder()
             decoder.on("decoded", fun(p: Any?) {
-                val p = p as ClientPacket<Any>;
-                obj.data = originalData;
-                obj.attachments = -1;
-                assertPacket(obj, p);
+                val p = p as ClientPacket<Any>
+                obj.data = originalData
+                obj.attachments = -1
+                assertPacket(obj, p)
             })
 
 
             encodedPackets.forEach { packet ->
                 if (packet is String) {
-                    decoder.add(packet);
+                    decoder.add(packet)
                 } else if (packet is ByteArray) {
-                    decoder.add(packet);
+                    decoder.add(packet)
                 }
             }
         }
 
         fun assertPacket(expected: ClientPacket<*>, actual: ClientPacket<*>) {
-            assertEquals(expected.type, actual.type);
-            assertEquals(expected.id, actual.id);
-            assertEquals(expected.nsp, actual.nsp);
-            assertEquals(expected.attachments, actual.attachments);
+            assertEquals(expected.type, actual.type)
+            assertEquals(expected.id, actual.id)
+            assertEquals(expected.nsp, actual.nsp)
+            assertEquals(expected.attachments, actual.attachments)
 
             if (expected.data is JsonArray) {
                 println(expected.data)
@@ -69,7 +69,7 @@ class helpers {
 
                 assertEquals(
                     (expected.data as JsonArray),actual.data,
-                );
+                )
 
             } else if (expected.data is JsonObject) {
                 println(expected.data)
@@ -78,7 +78,7 @@ class helpers {
                 assertEquals((expected.data as JsonObject),actual.data)
 
             } else {
-                assertEquals(expected.data ?: mapOf<Any, Any>(), actual.data ?: mapOf<Any, Any>());
+                assertEquals(expected.data ?: mapOf<Any, Any>(), actual.data ?: mapOf<Any, Any>())
             }
         }
     }

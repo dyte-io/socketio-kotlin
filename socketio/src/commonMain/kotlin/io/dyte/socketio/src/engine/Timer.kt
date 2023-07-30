@@ -5,9 +5,9 @@ import kotlin.coroutines.CoroutineContext
 
 class Timer(timeMillis: Long, Fx: () -> Unit): CoroutineScope { // implement CoroutineScope to create local scope
         private var job: Job = Job()
-        private var timeMillis = timeMillis;
-        private var Fx = Fx;
-        override val coroutineContext: CoroutineContext
+        private var timeMillis = timeMillis
+    private var Fx = Fx
+    override val coroutineContext: CoroutineContext
             get() = Dispatchers.Default + job
 
         // this method will help to stop execution of a coroutine.
@@ -17,7 +17,7 @@ class Timer(timeMillis: Long, Fx: () -> Unit): CoroutineScope { // implement Cor
         }
 
         fun schedule() = launch { // launching the coroutine
-            delay(timeMillis);
+            delay(timeMillis)
             Fx()
         }
 }

@@ -7,7 +7,7 @@ class ClientPacket<T> {
     var data: T? = null
     var attachments = 0
 
-    constructor() {}
+    constructor()
     constructor(type: Int) {
         this.type = type
     }

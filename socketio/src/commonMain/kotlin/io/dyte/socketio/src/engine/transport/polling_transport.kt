@@ -8,20 +8,20 @@ abstract class PollingTransport: Transport {
   /**
     Transport name.
    */
-  override var name: String = "polling";
+  override var name: String = "polling"
 
-  override var supportsBinary: Boolean = false;
-  var polling: Boolean = false;
+    override var supportsBinary: Boolean = false
+    var polling: Boolean = false
 
-  /**
+    /**
   * Polling interface.
     * @param {Object} opts
     * @api private
   */
   constructor(opts: TransportOptions, socket: EngineSocket?) : super(opts, socket) {
-    var forceBase64 = opts.forceBase64 == true;
-    if (/*!hasXHR2 || */ forceBase64) {
-      supportsBinary = false;
+    var forceBase64 = opts.forceBase64 == true
+      if (/*!hasXHR2 || */ forceBase64) {
+      supportsBinary = false
     }
   }
 
@@ -31,7 +31,7 @@ abstract class PollingTransport: Transport {
     * @api private
   */
   override fun doOpen() {
-    poll();
+    poll()
   }
 
   /**
@@ -40,38 +40,38 @@ abstract class PollingTransport: Transport {
     * @api private
   */
   fun pause(onPause: () -> Unit) {
-    var self = this;
+    var self = this
 
-    readyState = "pausing";
+      readyState = "pausing"
 
-    var pause = fun () {
-      Logger.fine("paused");
-      self.readyState = "paused";
-      onPause();
-    };
+      var pause = fun () {
+      Logger.fine("paused")
+        self.readyState = "paused"
+        onPause()
+    }
 
-    if (polling == true || writable != true) {
-      var total = 0;
+      if (polling == true || writable != true) {
+      var total = 0
 
-      if (polling == true) {
-        Logger.fine("we are currently polling - waiting to pause");
-        total++;
-        once("pollComplete", fun (d: Any?) {
-          Logger.fine("pre-pause polling complete");
-          if (--total == 0) pause();
-        });
+        if (polling == true) {
+        Logger.fine("we are currently polling - waiting to pause")
+          total++
+          once("pollComplete", fun (d: Any?) {
+          Logger.fine("pre-pause polling complete")
+            if (--total == 0) pause()
+        })
       }
 
       if (writable != true) {
-        Logger.fine("we are currently writing - waiting to pause");
-        total++;
-        once("drain", fun (data: Any? ) {
-          Logger.fine("pre-pause writing complete");
-          if (--total == 0) pause();
-        });
+        Logger.fine("we are currently writing - waiting to pause")
+          total++
+          once("drain", fun (data: Any? ) {
+          Logger.fine("pre-pause writing complete")
+            if (--total == 0) pause()
+        })
       }
     } else {
-      pause();
+      pause()
     }
   }
 
@@ -80,10 +80,10 @@ abstract class PollingTransport: Transport {
     * @api public
   */
   fun poll() {
-    Logger.fine("polling");
-    polling = true;
-    doPoll();
-    emit("poll");
+    Logger.fine("polling")
+      polling = true
+      doPoll()
+      emit("poll")
   }
 
   /**
@@ -91,19 +91,19 @@ abstract class PollingTransport: Transport {
     * @api private
   */
   override fun onData(data: String) {
-    var self = this;
-    Logger.fine("polling got data $data");
+    var self = this
+      Logger.fine("polling got data $data")
 
-    // decode payload
-    EnginePacketParser.deserializeMultiplePacket(data as String).forEach {
+      // decode payload
+    EnginePacketParser.deserializeMultiplePacket(data).forEach {
       // if its the first message we consider the transport open
       if ("opening" == self.readyState) {
-        self.onOpen();
+        self.onOpen()
       }
       when (it) {
         is EnginePacket.Close -> self.onClose()
         else -> {
-          self.onPacket(it);
+          self.onPacket(it)
         }
       }
     }
@@ -111,13 +111,13 @@ abstract class PollingTransport: Transport {
     // if an event did not trigger closing
     if ("closed" != readyState) {
       // if we got data we"re not polling
-      polling = false;
-      emit("pollComplete");
+      polling = false
+        emit("pollComplete")
 
-      if ("open" == readyState) {
-        poll();
+        if ("open" == readyState) {
+        poll()
       } else {
-        Logger.fine("ignoring poll - transport state ${readyState}");
+        Logger.fine("ignoring poll - transport state ${readyState}")
       }
     }
   }
@@ -127,23 +127,23 @@ abstract class PollingTransport: Transport {
     * @api private
   */
   override fun doClose() {
-    var self = this;
+    var self = this
 
-    var _close = fun (data: Any?)  {
-      Logger.fine("writing close packet");
-      self.write(
+      var _close = fun (data: Any?)  {
+      Logger.fine("writing close packet")
+        self.write(
         listOf(EnginePacket.Close)
-      );
-    };
+      )
+    }
 
-    if ("open" == readyState) {
-      Logger.fine("transport open - closing");
-      _close(null);
+      if ("open" == readyState) {
+      Logger.fine("transport open - closing")
+        _close(null)
     } else {
       // in case we"re trying to close while
       // handshaking is in progress (GH-164)
-      Logger.fine("transport not open - deferring close");
-      once("open", _close);
+      Logger.fine("transport not open - deferring close")
+        once("open", _close)
     }
   }
 
@@ -154,15 +154,15 @@ abstract class PollingTransport: Transport {
     * @api private
   */
   override fun write(packets: List<EnginePacket>) {
-    var self = this;
-    writable = false;
-    var callbackfn = fun(data: Any?) {
-      self.writable = true;
-      self.emit("drain");
-    };
+    var self = this
+      writable = false
+      var callbackfn = fun(data: Any?) {
+      self.writable = true
+        self.emit("drain")
+    }
 
-    val serialized = EnginePacketParser.serializeMultiplePacket(packets)
-    self.doWrite(serialized, callbackfn);
+      val serialized = EnginePacketParser.serializeMultiplePacket(packets)
+    self.doWrite(serialized, callbackfn)
   }
 
   /**
@@ -170,12 +170,12 @@ abstract class PollingTransport: Transport {
     * @api private
   */
   fun uri(): String {
-    var query = this.query; //TODO: or else
+    var query = this.query //TODO: or else
     Logger.fine("3 ${query.formUrlEncode()}")
-    var schema = if(secure)  "https" else "http";
-    var port = "";
+    var schema = if(secure)  "https" else "http"
+      var port = ""
 
-    // cache busting is forced
+      // cache busting is forced
     if (timestampRequests) {
       query = query.plus(
         Parameters.build { append(timestampParam as String, GMTDate().timestamp.toString(36)); })
@@ -192,25 +192,25 @@ abstract class PollingTransport: Transport {
     if (this.port > 0 &&
         (("https" == schema && this.port != 443) ||
             ("http" == schema && this.port != 80))) {
-      port = ":${this.port}";
+      port = ":${this.port}"
     }
 
     var queryString = query.formUrlEncode()
 
     // prepend ? to query
     if (queryString.isNotEmpty()) {
-      queryString = "?$queryString";
+      queryString = "?$queryString"
     }
 
-    var ipv6 = hostname.contains(":");
-    return schema +
+    var ipv6 = hostname.contains(":")
+      return schema +
             "://" +
             (if(ipv6) "[" + hostname + "]" else hostname) +
             port +
             path +
-            queryString;
+            queryString
   }
 
-  abstract fun doWrite(data: String, callback: (data: Any?) -> Unit);
-  abstract fun doPoll();
+  abstract fun doWrite(data: String, callback: (data: Any?) -> Unit)
+    abstract fun doPoll()
 }

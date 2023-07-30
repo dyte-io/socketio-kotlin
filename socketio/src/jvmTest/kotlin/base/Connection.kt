@@ -33,7 +33,7 @@ abstract class Connection(val serverType: String) {
         serverOutout = serverService!!.submit(object : Runnable {
             override fun run() {
                 val reader = BufferedReader(
-                    InputStreamReader(serverProcess!!.getInputStream())
+                    InputStreamReader(serverProcess!!.inputStream)
                 )
                 var line: String
                 try {
@@ -50,7 +50,7 @@ abstract class Connection(val serverType: String) {
         serverError = serverService!!.submit(object : Runnable {
             override fun run() {
                 val reader = BufferedReader(
-                    InputStreamReader(serverProcess!!.getErrorStream())
+                    InputStreamReader(serverProcess!!.errorStream)
                 )
                 var line: String
                 try {
@@ -85,7 +85,7 @@ abstract class Connection(val serverType: String) {
 
     fun createEnv(): Array<String?> {
         val env: MutableMap<String, String> =
-            java.util.HashMap<String, String>(java.lang.System.getenv())
+            java.util.HashMap<String, String>(System.getenv())
         env["DEBUG"] = "engine*"
         env["PORT"] = PORT.toString()
         val _env = arrayOfNulls<String>(env.size)

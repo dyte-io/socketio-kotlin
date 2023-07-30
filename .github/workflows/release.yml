@@ -1,8 +1,5 @@
 name: Release to Maven
-on:
-  push:
-    branches:
-      - main
+on: workflow_dispatch
 
 jobs:
   publish:

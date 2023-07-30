@@ -44,7 +44,7 @@ class WebSocketTransport : Transport {
                     headers {
                         append("Accept", "*/*")
                         extraHeaders?.forEach {
-                            append(it.key, it.value as String)
+                            append(it.key, it.value)
                         }
                     }
                 }
@@ -171,7 +171,7 @@ fun uri(): String {
                 append(
                     timestampParam as String,
                     GMTDate().timestamp.toString(36)
-                );
+                )
             })
     }
 
@@ -191,7 +191,7 @@ fun uri(): String {
 
     println("XX: $queryString")
 
-    var ipv6 = hostname.contains(":");
+    var ipv6 = hostname.contains(":")
     return schema +
             "://" +
             (if (ipv6) "[" + hostname + "]" else hostname) +

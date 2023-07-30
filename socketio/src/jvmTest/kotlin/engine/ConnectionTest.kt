@@ -33,7 +33,7 @@ class ConnectionTest : Connection("engine") {
         socket.on(EngineSocket.EVENT_OPEN, handler = fun(_) {
             socket.send("cash money €€€")
             socket.on(EngineSocket.EVENT_MESSAGE, handler = fun(data: Any?) {
-                if (data as String == "hi") return;
+                if (data as String == "hi") return
                 values.offer(data)
                 socket.close()
             })
@@ -49,7 +49,7 @@ class ConnectionTest : Connection("engine") {
         socket.on(EngineSocket.EVENT_OPEN, handler = fun(_) {
             socket.send("\uD800\uDC00-\uDB7F\uDFFF\uDB80\uDC00-\uDBFF\uDFFF\uE000-\uF8FF")
             socket.on(EngineSocket.EVENT_MESSAGE, handler = fun(data: Any?) {
-                if (data as String == "hi") return;
+                if (data as String == "hi") return
                 values.offer(data)
                 socket.close()
 

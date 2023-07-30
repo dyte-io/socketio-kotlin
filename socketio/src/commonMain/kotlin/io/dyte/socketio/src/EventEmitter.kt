@@ -7,38 +7,39 @@ open class EventEmitter {
   /**
    * Mapping of events to a list of event handlers
    */
-  val _events = mutableMapOf<String, MutableList<(data: Any?) -> Unit>>();
+  val _events = mutableMapOf<String, MutableList<(data: Any?) -> Unit>>()
 
-  /**
+    /**
    * Mapping of events to a list of one-time event handlers
    */
-  val _eventsOnce = mutableMapOf<String, MutableList<(data: Any?) -> Unit>>();
-  /**
+  val _eventsOnce = mutableMapOf<String, MutableList<(data: Any?) -> Unit>>()
+
+    /**
    * List of handlers that listen every event
    */
-  val _eventsAny = mutableListOf<(event: String, data: Any?) -> Unit>();
+  val _eventsAny = mutableListOf<(event: String, data: Any?) -> Unit>()
 
 
-  /**
+    /**
    * This function triggers all the handlers currently listening
    * to [event] and passes them [data].
    */
   open fun emit(event: String, data: Any? = null) {
-    val list = (this._events.getOrElse(event) { listOf() }).toList();
-    Logger.fine("${list.size} for $event")
+    val list = (this._events.getOrElse(event) { listOf() }).toList()
+      Logger.fine("${list.size} for $event")
     // todo: try to optimize this. Maybe remember the off() handlers and remove later?
     // handler might be off() inside handler; make a copy first
     list.forEach {
-      it(data);
-    };
+      it(data)
+    }
 
-    this._eventsOnce.remove(event)?.forEach {
-      it(data);
-    };
+      this._eventsOnce.remove(event)?.forEach {
+      it(data)
+    }
 
-    this._eventsAny.forEach {
-      it(event, data);
-    };
+      this._eventsAny.forEach {
+      it(event, data)
+    }
   }
 
   /**
@@ -63,7 +64,7 @@ open class EventEmitter {
    * This function binds the [handler] as a listener to any event
    */
   fun onAny(handler: (event: String, data: Any?) -> Unit) {
-    this._eventsAny.add(handler);
+    this._eventsAny.add(handler)
   }
 
   /**
@@ -71,17 +72,17 @@ open class EventEmitter {
    */
   fun off(event: String, handler: (data: Any?) -> Unit) {
     if (handler != null) {
-      this._events[event]?.remove(handler);
-      this._eventsOnce[event]?.remove(handler);
-      if (this._events[event]?.isEmpty() == true) {
-        this._events.remove(event);
+      this._events[event]?.remove(handler)
+        this._eventsOnce[event]?.remove(handler)
+        if (this._events[event]?.isEmpty() == true) {
+        this._events.remove(event)
       }
       if (this._eventsOnce[event]?.isEmpty() == true) {
-        this._eventsOnce.remove(event);
+        this._eventsOnce.remove(event)
       }
     } else {
-      this._events.remove(event);
-      this._eventsOnce.remove(event);
+      this._events.remove(event)
+        this._eventsOnce.remove(event)
     }
   }
 
@@ -91,9 +92,9 @@ open class EventEmitter {
    */
   fun offAny(handler: (event: String, data: Any?) -> Unit) {
     if (handler != null) {
-      this._eventsAny.remove(handler);
+      this._eventsAny.remove(handler)
     } else {
-      this._eventsAny.clear();
+      this._eventsAny.clear()
     }
   }
 
@@ -101,9 +102,9 @@ open class EventEmitter {
    * This function unbinds all the handlers for all the events.
    */
   fun clearListeners() {
-    this._events.clear();
-    this._eventsOnce.clear();
-    this._eventsAny.clear();
+    this._events.clear()
+      this._eventsOnce.clear()
+      this._eventsAny.clear()
   }
 
   /**
@@ -111,6 +112,6 @@ open class EventEmitter {
    */
   fun hasListeners(event: String): Boolean {
     return this._events[event]?.isNotEmpty() == true ||
-        this._eventsOnce[event]?.isNotEmpty() == true;
+        this._eventsOnce[event]?.isNotEmpty() == true
   }
 }

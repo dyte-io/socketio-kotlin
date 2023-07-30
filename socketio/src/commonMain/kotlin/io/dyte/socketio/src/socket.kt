@@ -8,15 +8,16 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonArray
 
-typealias ACKFn = Function1<Any?, Unit>?;
+typealias ACKFn = Function1<Any?, Unit>?
+
 class SocketClient(io: Manager, nsp: String, opts: ManagerOptions): EventEmitter() {
-    var CONNECT = 0;
-    var DISCONNECT = 1;
-    var EVENT = 2;
-    var ACK = 3;
-    var CONNECT_ERROR = 4;
-    var BINARY_EVENT = 5;
-    var BINARY_ACK = 6;
+    var CONNECT = 0
+    var DISCONNECT = 1
+    var EVENT = 2
+    var ACK = 3
+    var CONNECT_ERROR = 4
+    var BINARY_EVENT = 5
+    var BINARY_ACK = 6
 
     var EVENTS = listOf<String>(
         "connect",
@@ -32,29 +33,29 @@ class SocketClient(io: Manager, nsp: String, opts: ManagerOptions): EventEmitter
         "reconnecting",
         "ping",
         "pong"
-    );
+    )
 
     companion object {
-        val EVENT_CONNECT = "connect";
+        val EVENT_CONNECT = "connect"
         val EVENT_DISCONNECT = "disconnect"
     }
 
-    val nsp: String = nsp;
-    val opts: ManagerOptions = opts;
+    val nsp: String = nsp
+    val opts: ManagerOptions = opts
 
-    val io: Manager = io;
-    val json: SocketClient = this;
-    var ids = 0;
-    val acks: MutableMap<String, ((data: Any?) -> Unit)> = mutableMapOf<String,((data: Any?) -> Unit)>();
-    var connected = false;
-    var disconnected = true;
-    var sendBuffer = mutableListOf<ClientPacket<*>>();
-    var receiveBuffer = mutableListOf<MutableList<Any>>();
-    val query: Parameters? = opts.query;
-    val auth: Any? = opts.auth;
-    var subs: MutableList<Destroyable>? = mutableListOf<Destroyable>();
-    var flags = mutableMapOf<String, Boolean>();
-    var id: String? = "";
+    val io: Manager = io
+    val json: SocketClient = this
+    var ids = 0
+    val acks: MutableMap<String, ((data: Any?) -> Unit)> = mutableMapOf<String,((data: Any?) -> Unit)>()
+    var connected = false
+    var disconnected = true
+    var sendBuffer = mutableListOf<ClientPacket<*>>()
+    var receiveBuffer = mutableListOf<MutableList<Any>>()
+    val query: Parameters? = opts.query
+    val auth: Any? = opts.auth
+    var subs: MutableList<Destroyable>? = mutableListOf<Destroyable>()
+    var flags = mutableMapOf<String, Boolean>()
+    var id: String? = ""
     // TODO: DYTE
 //    if (io.autoConnect) open();
 
@@ -63,7 +64,7 @@ class SocketClient(io: Manager, nsp: String, opts: ManagerOptions): EventEmitter
      */
     fun getActive(): Boolean
     {
-        return subs != null;
+        return subs != null
     }
 
     /**
@@ -73,16 +74,16 @@ class SocketClient(io: Manager, nsp: String, opts: ManagerOptions): EventEmitter
      */
     fun open() {
         connect()
-    };
+    }
 
     fun connect(): SocketClient {
-        if (connected) return this;
-        subEvents();
+        if (connected) return this
+        subEvents()
         if (!io.reconnecting) {
-            io.open(opt=this.opts); // ensure open
+            io.open(opt=this.opts) // ensure open
         }
-        if (io.readyState == "open") onopen(null);
-        return this;
+        if (io.readyState == "open") onopen(null)
+        return this
     }
 
     /**
@@ -92,8 +93,8 @@ class SocketClient(io: Manager, nsp: String, opts: ManagerOptions): EventEmitter
       * @api public
     */
     fun send(args: List<Any>): SocketClient {
-        emit("message", args);
-        return this;
+        emit("message", args)
+        return this
     }
 
     /**
@@ -106,51 +107,51 @@ class SocketClient(io: Manager, nsp: String, opts: ManagerOptions): EventEmitter
     */
     fun emit(event: String, vararg data: Any?) {
         if(data.size > 0 && data.last() is Function1<*,*>){
-            _emitWithAck(event, data.toList().subList(0,data.size - 1), data.last() as Function1<Any?,Unit>);
+            _emitWithAck(event, data.toList().subList(0,data.size - 1), data.last() as Function1<Any?,Unit>)
         } else {
             _emitWithAck(event, data.toList())
         }
     }
 
     override fun emit(event: String, data: Any?) {
-        _emitWithAck(event, data);
+        _emitWithAck(event, data)
     }
 
     fun onConnect(callback: () -> Unit) {
         on("connect", fun (_) {
-            callback();
-        });
+            callback()
+        })
     }
 
     fun onEvent(event: String, callback: (data: ArrayList<JsonElement>) -> Unit) {
         onEvent(event, fun (data: ArrayList<JsonElement>, ack: ACKFn) {
-            callback(data);
-        });
+            callback(data)
+        })
     }
 
     fun onEvent(event: String, callback: (data: ArrayList<JsonElement>, ack: ACKFn) -> Unit) {
         on(event, fun (data: Any?) {
             if(data is Function1<*, *>) {
-                callback(ArrayList(), data as ACKFn);
+                callback(ArrayList(), data as ACKFn)
             } else if (data is ArrayList<*>) {
                 var ackElem: Function1<Any?, Unit>? =  null
                 try {
                     val lastElem = data.last()
                     if(lastElem is Function1<*,*>) {
-                        ackElem = lastElem as ACKFn;
+                        ackElem = lastElem as ACKFn
                     }
                 }catch (e: Exception) {}
-                val _data = data as ArrayList<JsonElement>;
+                val _data = data as ArrayList<JsonElement>
                 if(ackElem != null) {
                     // all data except the ack callback
-                    callback(ArrayList(_data.subList(0, data.size -1)), ackElem);
+                    callback(ArrayList(_data.subList(0, data.size -1)), ackElem)
                 } else {
                     callback(_data, null)
                 }
             } else {
                 println("ELSEE::")
             }
-        });
+        })
     }
 
 
@@ -174,16 +175,16 @@ class SocketClient(io: Manager, nsp: String, opts: ManagerOptions): EventEmitter
         ack: ((data: Any?) -> Unit)? = null,
     ) {
         if (EVENTS.contains(event)) {
-            super.emit(event, data);
+            super.emit(event, data)
         } else {
-            var sendData = mutableListOf<JsonElement>(JsonPrimitive(event));
+            var sendData = mutableListOf<JsonElement>(JsonPrimitive(event))
 
             if (data is List<*>) {
                 data.forEach {
-                    utils.handlePrimitive(sendData, it);
+                    utils.handlePrimitive(sendData, it)
                 }
             } else {
-                utils.handlePrimitive(sendData, data);
+                utils.handlePrimitive(sendData, data)
             }
 
             var packet = ClientPacket(EVENT,sendData)
@@ -191,22 +192,22 @@ class SocketClient(io: Manager, nsp: String, opts: ManagerOptions): EventEmitter
 
             // event ack callback
             if (ack != null) {
-                Logger.fine("emitting packet with ack id $ids");
-                acks["$ids"] = ack;
-                packet.id = ids++;
+                Logger.fine("emitting packet with ack id $ids")
+                acks["$ids"] = ack
+                packet.id = ids++
             }
-            val isTransportWritable = io.engine != null && io.engine.transport != null && io.engine.transport?.writable == true;
+            val isTransportWritable = io.engine != null && io.engine.transport != null && io.engine.transport?.writable == true
 
-            val discardPacket = flags.get("volatile") != null && (!isTransportWritable || !connected);
+            val discardPacket = flags.get("volatile") != null && (!isTransportWritable || !connected)
             if (discardPacket) {
                 Logger
-                    .fine("discard packet as the transport is not currently writable");
+                    .fine("discard packet as the transport is not currently writable")
             } else if (connected) {
-                this.packet(packet as ClientPacket<*>);
+                this.packet(packet as ClientPacket<*>)
             } else {
-                sendBuffer.add(packet);
+                sendBuffer.add(packet)
             }
-            flags.clear(); // TODO: Recheck
+            flags.clear() // TODO: Recheck
         }
     }
 
@@ -218,8 +219,8 @@ class SocketClient(io: Manager, nsp: String, opts: ManagerOptions): EventEmitter
     */
     fun packet(packet: ClientPacket<*>)
     {
-        packet.nsp = nsp;
-        io.packet(packet);
+        packet.nsp = nsp
+        io.packet(packet)
     }
 
     /**
@@ -229,7 +230,7 @@ class SocketClient(io: Manager, nsp: String, opts: ManagerOptions): EventEmitter
     */
     fun onopen(data: Any?)
     {
-        Logger.fine("transport is open - connecting");
+        Logger.fine("transport is open - connecting")
 
         // write connect packet if necessary
         // if ("/" != nsp) {
@@ -243,13 +244,13 @@ class SocketClient(io: Manager, nsp: String, opts: ManagerOptions): EventEmitter
         if (auth != null) {
             if (auth is Function1<*, *>) {
                 (auth as Function1<Any,Unit>).invoke(fun (data: Any) {
-                    packet(ClientPacket(CONNECT, data ));
-                });
+                    packet(ClientPacket(CONNECT, data ))
+                })
             } else {
-                packet(ClientPacket(CONNECT, auth ));
+                packet(ClientPacket(CONNECT, auth ))
             }
         } else {
-            packet(ClientPacket<Any>(CONNECT));
+            packet(ClientPacket<Any>(CONNECT))
         }
     }
 
@@ -259,7 +260,7 @@ class SocketClient(io: Manager, nsp: String, opts: ManagerOptions): EventEmitter
     fun onerror(err: Any?)
     {
         if (!connected) {
-            emit("connect_error", err);
+            emit("connect_error", err)
         }
     }
 
@@ -271,13 +272,13 @@ class SocketClient(io: Manager, nsp: String, opts: ManagerOptions): EventEmitter
     */
     fun onclose(data: Any?)
     {
-        val reason = data as String;
-        Logger.fine("close ($reason)");
-        emit("disconnecting", reason);
-        connected = false;
-        disconnected = true;
-        id = null;
-        emit(EVENT_DISCONNECT, reason);
+        val reason = data as String
+        Logger.fine("close ($reason)")
+        emit("disconnecting", reason)
+        connected = false
+        disconnected = true
+        id = null
+        emit(EVENT_DISCONNECT, reason)
     }
 
     /**
@@ -289,18 +290,18 @@ class SocketClient(io: Manager, nsp: String, opts: ManagerOptions): EventEmitter
     fun onpacket(_packet: Any?)
     {
         val packet = _packet as ClientPacket<*>
-        if (packet.nsp != nsp) return;
+        if (packet.nsp != nsp) return
         Logger.fine("onPacket socket ${packet.type}")
         when(packet.type) {
             CONNECT -> {
                 if (packet.data != null && (packet.data as JsonObject)["sid"] != null) {
-                    val id = (packet.data as JsonObject)["sid"].toString();
-                    onconnect(id);
+                    val id = (packet.data as JsonObject)["sid"].toString()
+                    onconnect(id)
                 } else {
                     emit(
                         "connect_error",
                         "It seems you are trying to reach a Socket.IO server in v2.x with a v3.x client, but they are not compatible (more information here: https://socket.io/docs/v3/migrating-from-2-x-to-3-0/)"
-                    );
+                    )
                 }
             }
             EVENT -> onevent(packet)
@@ -318,14 +319,14 @@ class SocketClient(io: Manager, nsp: String, opts: ManagerOptions): EventEmitter
       * @api private
     */
     fun subEvents() {
-        if (subs?.isNotEmpty() == true) return;
-        var io = this.io;
+        if (subs?.isNotEmpty() == true) return
+        var io = this.io
         subs = mutableListOf(
             Util.on(io, "open", ::onopen),
             Util.on(io, "packet", ::onpacket),
             Util.on(io, "error", ::onerror),
             Util.on(io, "close", ::onclose)
-        );
+        )
     }
 
     /**
@@ -336,21 +337,21 @@ class SocketClient(io: Manager, nsp: String, opts: ManagerOptions): EventEmitter
     */
     fun onevent(packet: ClientPacket<*>)
     {
-        val args = ((packet.data ?: buildJsonArray {  }) as JsonArray).toMutableList<Any>();
+        val args = ((packet.data ?: buildJsonArray {  }) as JsonArray).toMutableList<Any>()
 
         if (null != packet.id) {
-            args.add(ack(packet.id));
+            args.add(ack(packet.id))
         }
-        Logger.fine("onEvent size ${args.size} $connected");
+        Logger.fine("onEvent size ${args.size} $connected")
         args.forEach {
-            Logger.fine("onEvent ${it}");
+            Logger.fine("onEvent ${it}")
         }
         if (connected == true) {
             try {
-                super.emit(args.first().toString().removePrefix("\"").removeSuffix("\""), ArrayList(args.subList(1, args.size)));
+                super.emit(args.first().toString().removePrefix("\"").removeSuffix("\""), ArrayList(args.subList(1, args.size)))
             } catch (e: Exception){Logger.fine("args socket error emit $e")}
         } else {
-            receiveBuffer.add(args);
+            receiveBuffer.add(args)
         }
     }
 
@@ -360,14 +361,14 @@ class SocketClient(io: Manager, nsp: String, opts: ManagerOptions): EventEmitter
       * @api private
     */
     fun ack(id: Int): (Any) -> Unit {
-        var sent = false;
+        var sent = false
         return fun (data: Any?) {
             // prevent double callbacks
-            if (sent) return;
-            sent = true;
-            Logger.fine("sending ack $data");
+            if (sent) return
+            sent = true
+            Logger.fine("sending ack $data")
 
-            var sendData = mutableListOf<JsonElement>();
+            var sendData = mutableListOf<JsonElement>()
             if (data is List<*>) {
                 data.forEach {
                     utils.handlePrimitive(sendData, it)
@@ -375,10 +376,10 @@ class SocketClient(io: Manager, nsp: String, opts: ManagerOptions): EventEmitter
             } else {
                 utils.handlePrimitive(sendData,data)
             }
-            val p = ClientPacket( ACK, sendData );
-            p.id = id;
-            packet(p);
-        };
+            val p = ClientPacket( ACK, sendData )
+            p.id = id
+            packet(p)
+        }
     }
 
     /**
@@ -389,14 +390,14 @@ class SocketClient(io: Manager, nsp: String, opts: ManagerOptions): EventEmitter
     */
     fun onack(packet: ClientPacket<*>)
     {
-        var ack_ = acks.remove("${packet.id}");
+        var ack_ = acks.remove("${packet.id}")
         if (ack_ is Function1<*,*>) {
-            Logger.fine("calling ack ${packet.id} with ${packet.data}");
+            Logger.fine("calling ack ${packet.id} with ${packet.data}")
 
-            var args = packet.data as JsonArray;
-            ack_(ArrayList(args.toList()));
+            var args = packet.data as JsonArray
+            ack_(ArrayList(args.toList()))
         } else {
-            Logger.fine("bad ack ${packet.id}");
+            Logger.fine("bad ack ${packet.id}")
         }
     }
 
@@ -407,11 +408,11 @@ class SocketClient(io: Manager, nsp: String, opts: ManagerOptions): EventEmitter
     */
     fun onconnect(id: String)
     {
-        this.id = id;
-        connected = true;
-        disconnected = false;
-        emit("connect");
-        emitBuffered();
+        this.id = id
+        connected = true
+        disconnected = false
+        emit("connect")
+        emitBuffered()
     }
 
     /**
@@ -422,19 +423,19 @@ class SocketClient(io: Manager, nsp: String, opts: ManagerOptions): EventEmitter
     fun emitBuffered()
     {
         for (i in 0..(receiveBuffer.size-1)) {
-        val args = receiveBuffer[i];
-        if (args.size > 2) {
-            super.emit(args.first() as String, args.subList(1,args.size));
+        val args = receiveBuffer[i]
+            if (args.size > 2) {
+            super.emit(args.first() as String, args.subList(1,args.size))
         } else {
-           super.emit(args.first() as String,null);
+           super.emit(args.first() as String,null)
         }
     }
-        receiveBuffer = mutableListOf<MutableList<Any>>();
+        receiveBuffer = mutableListOf<MutableList<Any>>()
 
         for (i in 0..(sendBuffer.size-1)) {
-            packet(sendBuffer[i]);
+            packet(sendBuffer[i])
         }
-        sendBuffer = mutableListOf();
+        sendBuffer = mutableListOf()
     }
 
     /**
@@ -444,9 +445,9 @@ class SocketClient(io: Manager, nsp: String, opts: ManagerOptions): EventEmitter
     */
     fun ondisconnect()
     {
-        Logger.fine("server disconnect ($nsp)");
-        destroy();
-        onclose("io server disconnect");
+        Logger.fine("server disconnect ($nsp)")
+        destroy()
+        onclose("io server disconnect")
     }
 
     /**
@@ -458,17 +459,17 @@ class SocketClient(io: Manager, nsp: String, opts: ManagerOptions): EventEmitter
     */
     fun destroy()
     {
-        val _subs = subs;
+        val _subs = subs
         if (_subs != null && _subs.isNotEmpty()) {
             // clean subscriptions to avoid reconnections
 
             for (i in 0..(_subs.size-1)) {
-                _subs[i].destroy();
+                _subs[i].destroy()
             }
-            subs = null;
+            subs = null
         }
 
-        io.destroy(this);
+        io.destroy(this)
     }
 
     /**
@@ -478,24 +479,24 @@ class SocketClient(io: Manager, nsp: String, opts: ManagerOptions): EventEmitter
       * @api public
     */
     fun close(): SocketClient {
-        return disconnect();
-    };
+        return disconnect()
+    }
 
     fun disconnect(): SocketClient
     {
         if (connected == true) {
-            Logger.fine("performing disconnect ($nsp)");
-            packet(ClientPacket<Any>(DISCONNECT));
+            Logger.fine("performing disconnect ($nsp)")
+            packet(ClientPacket<Any>(DISCONNECT))
         }
 
         // remove socket from pool
-        destroy();
+        destroy()
 
         if (connected == true) {
             // fire events
-            onclose("io client disconnect");
+            onclose("io client disconnect")
         }
-        return this;
+        return this
     }
 
     /**
@@ -505,8 +506,8 @@ class SocketClient(io: Manager, nsp: String, opts: ManagerOptions): EventEmitter
     */
     fun dispose()
     {
-        disconnect();
-        clearListeners();
+        disconnect()
+        clearListeners()
     }
 
     /**
@@ -518,7 +519,7 @@ class SocketClient(io: Manager, nsp: String, opts: ManagerOptions): EventEmitter
     */
     fun compress(compress: Boolean): SocketClient
     {
-        flags["compress"] = compress;
-        return this;
+        flags["compress"] = compress
+        return this
     }
 }

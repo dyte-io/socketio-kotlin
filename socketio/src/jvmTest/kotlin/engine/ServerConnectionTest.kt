@@ -109,7 +109,7 @@ class ServerConnectionTest : Connection("engine") {
     )
     fun pollingHeaders() {
         val messages: BlockingQueue<String> = LinkedBlockingQueue()
-        val opts = createOptions();
+        val opts = createOptions()
         opts.transports = mutableListOf("polling")
         opts.extraHeaders = mutableMapOf("X-EngineIO" to "foo")
         var socket = EngineSocket(_opts = opts)
