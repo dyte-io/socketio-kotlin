@@ -5,7 +5,6 @@ import SocketClient
 import Transport
 import base.Connection
 import io.dyte.socketio.src.engine.EnginePacket
-import io.dyte.socketio.src.engine.types.HandshakeModel
 import java.net.URISyntaxException
 import java.util.concurrent.BlockingQueue
 import java.util.concurrent.LinkedBlockingQueue

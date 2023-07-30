@@ -3,6 +3,7 @@ import io.dyte.socketio.src.engine.Timer
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.engine.cio.CIO
+import io.ktor.client.plugins.timeout
 import io.ktor.client.request.headers
 import io.ktor.client.request.request
 import io.ktor.client.request.setBody
@@ -176,14 +177,13 @@ class Request: EventEmitter {
               }
             }
           }
-          // TODO: Needs plugin
-//        timeout { connectTimeoutMillis = requestTimeout }
+//          timeout { connectTimeoutMillis = requestTimeout }
           if (reqMethod == "POST") {
             setBody(data);
             println("EEE $data");
           }
         }
-//      println(resp.bodyAsText());
+
         if (resp.status == HttpStatusCode.OK || resp.status.value == 1223) {
           var respData: Any;
           if (resp.contentType()?.contentType == "application/octet-stream") {
@@ -195,14 +195,15 @@ class Request: EventEmitter {
           onResponseHeaders(resp.headers.toMap());
 
           if (respData != null) {
-            if (respData is ByteArray) respData = (respData as ByteArray).toUByteArray();
+            if (respData is ByteArray) respData = respData.toUByteArray();
             onData(respData);
           }
         } else {
           Timer(1, fun() { onError(resp.status.value.toString()) }).schedule();
         }
       } catch (e: Exception) {
-        println("E2 ${e.message}")
+        onError("${e.message}");
+        Logger.fine("XHR Error ${e.message}")
         e.printStackTrace()
       }
     }

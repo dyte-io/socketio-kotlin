@@ -1,8 +1,9 @@
-import io.dyte.socketio.src.Logger
 import io.dyte.socketio.src.ClientPacket
+import io.dyte.socketio.src.Logger
 import io.dyte.socketio.src.engine.Timer
 import kotlin.math.*
 import kotlin.random.Random
+
 
 /**
   * Manager` constructor.
@@ -71,10 +72,12 @@ class Manager: EventEmitter {
     reconnectionDelay = options.reconnectionDelay;
     reconnectionDelayMax = options.reconnectionDelayMax;
     randomizationFactor = options.randomizationFactor;
-    backoff = Backoff(
-        reconnectionDelay,
-        reconnectionDelayMax,
-        factor = randomizationFactor);
+    // TODO fix Backoff
+//    backoff = Backoff(
+//        reconnectionDelay,
+//        reconnectionDelayMax,
+//        factor = randomizationFactor);
+    backoff = Backoff()
     timeout = options.timeout;
     this.uri = uri;
     autoConnect = options.autoConnect != false;
@@ -87,6 +90,14 @@ class Manager: EventEmitter {
     * @return {Manager} self or value
     * @api public
   */
+
+  companion object {
+    val EVENT_RECONNECT_ATTEMPT = "reconnect_attempt";
+    val EVENT_RECONNECT = "reconnect";
+    val EVENT_RECONNECT_FAILED = "reconnect_failed";
+    val EVENT_ERROR = "error";
+  }
+
   fun setReconnectionDelayMaxInternal(v : Long) {
     reconnectionDelayMax = v;
     backoff?.max = v;
@@ -102,6 +113,7 @@ class Manager: EventEmitter {
     // Only try to reconnect if it"s the first time we"re connecting
     if (!reconnecting && reconnection == true && backoff.attempts == 0) {
       // keeps reconnection from firing twice for the same reconnection loop
+      print("maybeReconnectOnOpen")
       reconnect();
     }
   }
@@ -138,7 +150,7 @@ class Manager: EventEmitter {
       Logger.fine("connect_error");
       cleanup();
       readyState = "closed";
-      super.emit("error", data);
+      super.emit(EVENT_ERROR, data);
       if (callback != null) {
         callback(mutableMapOf("error" to "Connection error", "data" to data));
       } else {
@@ -150,18 +162,20 @@ class Manager: EventEmitter {
     // emit `connect_timeout`
     if (timeout != null) {
       Logger.fine("connect attempt will timeout after $timeout");
-
-      if (timeout == 0L) {
-        openSubDestroy
-            .destroy(); // prevents a race condition with the "open" event
-      }
-      // set timer
-      var timer = Timer(timeout.toLong(), fun () {
+      val timeoutFx = fun () {
         Logger.fine("connect attempt timed out after $timeout");
         openSubDestroy.destroy();
+        socket.emit(EVENT_ERROR, "timeout");
         socket.close();
-        socket.emit("error", "timeout");
-      });
+      }
+      if (timeout == 0L) {
+        // prevents a race condition with the "open" event
+        timeoutFx();
+        return this;
+      }
+      // set timer
+      var timer = Timer(timeout, timeoutFx);
+      timer.schedule();
 
       subs.add(Destroyable(fun() { timer.cancel()}));
     }
@@ -245,7 +259,7 @@ class Manager: EventEmitter {
   */
   fun onerror(err: Any?) {
     Logger.fine("error $err");
-    emit("error", err);
+    emit(EVENT_ERROR, err);
   }
 
   /**
@@ -254,11 +268,11 @@ class Manager: EventEmitter {
     * @return {Socket}
     * @api public
   */
-  fun socket(nsp: String, opts: ManagerOptions): SocketClient {
+  fun socket(nsp: String): SocketClient {
     var socket = nsps[nsp];
 
     if (socket == null) {
-      socket = SocketClient(this, nsp, opts);
+      socket = SocketClient(this, nsp, this.options);
       nsps[nsp] = socket;
     }
 
@@ -339,7 +353,7 @@ class Manager: EventEmitter {
     Logger.fine("disconnect");
     skipReconnect = true;
     reconnecting = false;
-    if ("opening" == readyState) {
+    if ("open" != readyState) {
       // `onclose` will not fire because
       // an open event never happened
       cleanup();
@@ -379,19 +393,20 @@ class Manager: EventEmitter {
     if (backoff.attempts >= reconnectionAttempts) {
       Logger.fine("reconnect failed");
       backoff.reset();
-      emit("reconnect_failed");
+      emit(EVENT_RECONNECT_FAILED);
       reconnecting = false;
     } else {
       var delay = backoff.duration;
       Logger.fine("will wait %dms before reconnect attempt $delay");
 
       reconnecting = true;
-      var timer = Timer( delay.toLong(), fun () {
+      var timer = Timer( delay, fun () {
+        Logger.fine("attempting reconnect 0");
         // TODO: RECHECK
-        if (!skipReconnect) return;
+        if (skipReconnect) return;
 
         Logger.fine("attempting reconnect");
-        emit("reconnect_attempt", backoff.attempts);
+        emit(EVENT_RECONNECT_ATTEMPT, backoff.attempts);
 
         // check again for the case socket closed in above events
         if (skipReconnect) return;
@@ -407,8 +422,9 @@ class Manager: EventEmitter {
             Logger.fine("reconnect success");
             onreconnect();
           }
-        }, EngingeSocketOptions());
+        }, this.options);
       });
+      timer.schedule();
 
       subs.add(Destroyable(fun () { timer.cancel()}));
     }
@@ -426,7 +442,7 @@ class Manager: EventEmitter {
     var attempt = backoff.attempts;
     reconnecting = false;
     backoff.reset();
-    emit("reconnect", attempt);
+    emit(EVENT_RECONNECT, attempt);
   }
 }
 
@@ -469,6 +485,7 @@ class Backoff(min: Long = 100, max: Long = 10000, _jitter: Double = 0.0, factor:
     return if(ms <= 0) max else _ms.toLong();
   }
 
+
   /**
     * Reset the number of attempts.
     *
@@ -508,7 +525,7 @@ class Backoff(min: Long = 100, max: Long = 10000, _jitter: Double = 0.0, factor:
 
 open class ManagerOptions : EngingeSocketOptions() {
   var reconnection = true
-  var reconnectionAttempts = 0
+  var reconnectionAttempts = 5
   var reconnectionDelay: Long = 0
   var reconnectionDelayMax: Long = 0
   var randomizationFactor = 0.0

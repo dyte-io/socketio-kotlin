@@ -1,5 +1,6 @@
 import io.dyte.socketio.src.Logger
 import io.dyte.socketio.src.ClientPacket
+import io.dyte.socketio.src.utils
 import io.ktor.http.*
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
@@ -35,6 +36,7 @@ class SocketClient(io: Manager, nsp: String, opts: ManagerOptions): EventEmitter
 
     companion object {
         val EVENT_CONNECT = "connect";
+        val EVENT_DISCONNECT = "disconnect"
     }
 
     val nsp: String = nsp;
@@ -77,7 +79,7 @@ class SocketClient(io: Manager, nsp: String, opts: ManagerOptions): EventEmitter
         if (connected) return this;
         subEvents();
         if (!io.reconnecting) {
-            io.open(opt=EngingeSocketOptions()); // ensure open
+            io.open(opt=this.opts); // ensure open
         }
         if (io.readyState == "open") onopen(null);
         return this;
@@ -135,7 +137,7 @@ class SocketClient(io: Manager, nsp: String, opts: ManagerOptions): EventEmitter
                 try {
                     val lastElem = data.last()
                     if(lastElem is Function1<*,*>) {
-                        ackElem = data.last() as ACKFn;
+                        ackElem = lastElem as ACKFn;
                     }
                 }catch (e: Exception) {}
                 val _data = data as ArrayList<JsonElement>;
@@ -145,6 +147,8 @@ class SocketClient(io: Manager, nsp: String, opts: ManagerOptions): EventEmitter
                 } else {
                     callback(_data, null)
                 }
+            } else {
+                println("ELSEE::")
             }
         });
     }
@@ -173,20 +177,13 @@ class SocketClient(io: Manager, nsp: String, opts: ManagerOptions): EventEmitter
             super.emit(event, data);
         } else {
             var sendData = mutableListOf<JsonElement>(JsonPrimitive(event));
+
             if (data is List<*>) {
                 data.forEach {
-                    if(it is String) {
-                        sendData.add(JsonPrimitive(it));
-                    } else if (it is Boolean) {
-                        sendData.add(JsonPrimitive(it));
-                    } else if (it is Number) {
-                        sendData.add(JsonPrimitive(it));
-                    } else if (it is JsonElement) {
-                        sendData.add(it);
-                    }
+                    utils.handlePrimitive(sendData, it);
                 }
-            } else if (data is JsonElement) {
-                sendData.add(data);
+            } else {
+                utils.handlePrimitive(sendData, data);
             }
 
             var packet = ClientPacket(EVENT,sendData)
@@ -280,7 +277,7 @@ class SocketClient(io: Manager, nsp: String, opts: ManagerOptions): EventEmitter
         connected = false;
         disconnected = true;
         id = null;
-        emit("disconnect", reason);
+        emit(EVENT_DISCONNECT, reason);
     }
 
     /**
@@ -340,10 +337,8 @@ class SocketClient(io: Manager, nsp: String, opts: ManagerOptions): EventEmitter
     fun onevent(packet: ClientPacket<*>)
     {
         val args = ((packet.data ?: buildJsonArray {  }) as JsonArray).toMutableList<Any>();
-//    debug("emitting event %j", args);
 
         if (null != packet.id) {
-//      debug("attaching ack callback to event");
             args.add(ack(packet.id));
         }
         Logger.fine("onEvent size ${args.size} $connected");
@@ -375,16 +370,10 @@ class SocketClient(io: Manager, nsp: String, opts: ManagerOptions): EventEmitter
             var sendData = mutableListOf<JsonElement>();
             if (data is List<*>) {
                 data.forEach {
-                    if(it is String) {
-                        sendData.add(JsonPrimitive(it));
-                    } else if (it is Boolean) {
-                        sendData.add(JsonPrimitive(it));
-                    } else if (it is Number) {
-                        sendData.add(JsonPrimitive(it));
-                    } else if (it is JsonElement) {
-                        sendData.add(it);
-                    }
+                    utils.handlePrimitive(sendData, it)
                 }
+            } else {
+                utils.handlePrimitive(sendData,data)
             }
             val p = ClientPacket( ACK, sendData );
             p.id = id;

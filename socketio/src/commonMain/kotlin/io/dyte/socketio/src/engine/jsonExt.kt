@@ -37,7 +37,7 @@ fun JsonElement.asBoolean(): Boolean? {
 
 fun JsonElement.asString(): String? {
     try {
-        return this.jsonPrimitive.toString()
+        return this.jsonPrimitive.content
     } catch (e: Exception) {
         return null
     }

@@ -22,7 +22,6 @@ class helpers {
                 val p = p as ClientPacket<*>;
                 assertPacket(obj, p);
             });
-            println("sdfsdfSDF::" + encodedPackets.size + "::" + encodedPackets[0])
             decoder.add(encodedPackets[0]);
         }
 
@@ -65,8 +64,6 @@ class helpers {
             assertEquals(expected.attachments, actual.attachments);
 
             if (expected.data is JsonArray) {
-
-                println("sdfsdfsdfdsfsdf")
                 println(expected.data)
                 println(actual.data)
 
@@ -75,8 +72,6 @@ class helpers {
                 );
 
             } else if (expected.data is JsonObject) {
-
-                println("sdfsdfsdfdsfsd2f22")
                 println(expected.data)
                 println(actual.data)
 

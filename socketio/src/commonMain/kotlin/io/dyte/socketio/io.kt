@@ -32,7 +32,7 @@ class IO {
             if (!parsed.parameters.isEmpty()) {
                 opts.query = parsed.parameters.build();
             }
-            return io.socket(if (parsed.pathSegments.isEmpty()) "/" else parsed.encodedPath, opts);
+            return io.socket(if (parsed.pathSegments.isEmpty()) "/" else parsed.encodedPath);
         }
     }
 }
