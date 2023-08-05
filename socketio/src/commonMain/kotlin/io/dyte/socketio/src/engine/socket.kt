@@ -21,7 +21,7 @@ class EngineSocket : EventEmitter {
   var rememberUpgrade: Boolean
 
   var readyState = ""
-  var writeBuffer = mutableListOf<Any>()
+  var writeBuffer = mutableListOf<EnginePacket>()
   var prevBufferLen = 0
   lateinit var perMessageDeflate: MutableMap<String, Any>
   var id: String? = null
@@ -131,7 +131,7 @@ class EngineSocket : EventEmitter {
     //      options[it.key] = it.value;
     //    }
 
-    var optionsFinal = TransportOptions()
+    val optionsFinal = TransportOptions()
     optionsFinal.query = query
     //  optionsFinal.agent = opts.agent
     optionsFinal.hostname = this.hostname
@@ -159,7 +159,7 @@ class EngineSocket : EventEmitter {
    * @api private
    */
   fun open() {
-    var transportName: String
+    val transportName: String
     if (this.rememberUpgrade && priorWebsocketSuccess && transports.contains("websocket")) {
       transportName = "websocket"
     } else if (transports.isEmpty()) {
@@ -175,7 +175,7 @@ class EngineSocket : EventEmitter {
       transportName = transports[0]
     }
     readyState = "opening"
-    var transport: Transport
+    val transport: Transport
     // Retry with the next transport if the transport is disabled (jsonp: false)
     try {
       transport = createTransport(transportName)
@@ -241,19 +241,14 @@ class EngineSocket : EventEmitter {
    */
   fun probe(name: String) {
     Logger.debug("probing transport ${name}")
-    var probeTransportOptions = TransportOptions()
+    val probeTransportOptions = TransportOptions()
     probeTransportOptions.probe = true
     var transport: Transport? = createTransport(name, probeTransportOptions)
     var failed = false
-    var cleanup: () -> Unit
+    val cleanup = arrayListOf<() -> Unit>()
 
-    var onTransportOpen =
+    val onTransportOpen =
       fun(data: Any?) {
-        //            if (onlyBinaryUpgrades == true) {
-        //                var upgradeLosesBinary =
-        //                    supportsBinary == false && transport?.supportsBinary == false;
-        //                failed = failed || upgradeLosesBinary;
-        //            }
         if (failed) return
 
         Logger.info("probe transport $name opened")
@@ -277,8 +272,10 @@ class EngineSocket : EventEmitter {
                     if (failed) return
                     if ("closed" == readyState) return
                     Logger.info("changing transport and sending upgrade packet")
-                    // TODO: Cleanup
-                    //              cleanup();
+
+                    if (cleanup.size > 0) {
+                      cleanup[0]()
+                    }
                     setTransportInternal(transport!!)
                     transport?.send(listOf(EnginePacket.Upgrade))
                     emit(EVENT_UPGRADE, transport)
@@ -299,21 +296,22 @@ class EngineSocket : EventEmitter {
         )
       }
 
-    var freezeTransport =
+    val freezeTransport =
       fun() {
         if (failed) return
 
         // Any callback called by transport should be ignored since now
         failed = true
-
-        //      cleanup();
+        if (cleanup.size > 0) {
+          cleanup[0]()
+        }
 
         transport?.close()
         transport = null
       }
 
     // Handle any error that happens while probing
-    var onerror =
+    val onerror =
       fun(err: Any?) {
         val oldTransport = transport
         freezeTransport()
@@ -326,19 +324,19 @@ class EngineSocket : EventEmitter {
         )
       }
 
-    var onTransportClose =
+    val onTransportClose =
       fun(data: Any?) {
         onerror("transport closed")
       }
 
     // When the socket is closed while we"re probing
-    var onclose =
+    val onclose =
       fun(data: Any?) {
         onerror("socket closed")
       }
 
     // When the socket is upgraded while we"re probing
-    var onupgrade =
+    val onupgrade =
       fun(_to: Any?) {
         val to = _to as Transport?
         if (transport != null && to?.name != transport?.name) {
@@ -348,7 +346,8 @@ class EngineSocket : EventEmitter {
       }
 
     // Remove all listeners on the transport and on self
-    cleanup =
+    cleanup.add(
+      0,
       fun() {
         transport?.off("open", onTransportOpen)
         transport?.off("error", onerror)
@@ -356,6 +355,7 @@ class EngineSocket : EventEmitter {
         off("close", onclose)
         off("upgrading", onupgrade)
       }
+    )
 
     transport?.once("open", onTransportOpen)
     transport?.once("error", onerror)
@@ -435,11 +435,7 @@ class EngineSocket : EventEmitter {
     }
   }
 
-  /**
-   * ///Sets and resets ping timeout timer based on server pings.
-   *
-   * @api private ///
-   */
+  /** Sets and resets ping timeout timer based on server pings. */
   fun resetPingTimeout() {
     pingTimeoutTimer?.cancel()
     pingTimeoutTimer =
@@ -456,7 +452,6 @@ class EngineSocket : EventEmitter {
    * Called upon handshake completion. ///
    *
    * @param {Object} handshake obj
-   * @api private
    */
   fun onHandshake(data: EnginePacket.Open) {
     emit(EVENT_HANDSHAKE, data)
@@ -465,31 +460,13 @@ class EngineSocket : EventEmitter {
     transport!!.query = transport?.query!!.plus(Parameters.build { append("sid", data.sid) })
 
     upgrades = filterUpgrades(data.upgrades)
-    pingInterval = data.pingInterval.toLong()
-    pingTimeout = data.pingTimeout.toLong()
+    pingInterval = data.pingInterval
+    pingTimeout = data.pingTimeout
     onOpen()
     // In case open handler closes socket
     if ("closed" == readyState) return
     resetPingTimeout()
-
-    // Prolong liveness of socket on heartbeat
-    // off("heartbeat", onHeartbeat);
-    // on("heartbeat", onHeartbeat);
   }
-
-  /**
-   * Resets ping timeout. ///
-   *
-   * @api private // fun onHeartbeat(timeout) { // pingTimeoutTimer?.cancel(); // pingTimeoutTimer =
-   *   Timer( // Duration(milliseconds: timeout ?? (pingInterval + pingTimeout)), () { // if
-   *   ("closed" == readyState) return; // onClose("ping timeout"); // }); // }
-   */
-
-  /**
-   * Sends a ping packet. ///
-   *
-   * @api private // fun ping() { // sendPacket(type: "ping", callback: (_) => emit("ping")); // }
-   */
 
   /**
    * Called on `drain` event ///
@@ -528,7 +505,7 @@ class EngineSocket : EventEmitter {
       // keep track of current length of writeBuffer
       // splice writeBuffer and callbackBuffer on `drain`
       prevBufferLen = writeBuffer.size
-      transport?.send(writeBuffer.toList() as List<EnginePacket>)
+      transport?.send(writeBuffer.toList())
       emit("flush")
     }
   }
@@ -580,29 +557,35 @@ class EngineSocket : EventEmitter {
    * @api private
    */
   fun close(): EngineSocket {
-    var close =
+    val close =
       fun() {
         onClose("forced close", "")
         Logger.info("socket closing - telling transport to close")
         transport?.close()
       }
 
-    var temp: (Any) -> Unit
-    var cleanupAndClose =
+    var cleanupAndClose = arrayListOf<(Any?) -> Unit>()
+
+    cleanupAndClose.add(
+      0,
       fun(data: Any?) {
-        //      off("upgrade", temp);
-        //      off("upgradeError", temp);
+        if (cleanupAndClose.size > 0) {
+          off("upgrade", cleanupAndClose[0])
+          off("upgradeError", cleanupAndClose[0])
+        }
         close()
       }
+    )
 
     // a workaround for dart to access the local variable;
-    temp = cleanupAndClose
 
-    var waitForUpgrade =
+    val waitForUpgrade =
       fun() {
-        // wait for upgrade to finish since we can"t send packets while pausing a transport
-        once("upgrade", cleanupAndClose)
-        once("upgradeError", cleanupAndClose)
+        if (cleanupAndClose.size > 0) {
+          // wait for upgrade to finish since we can"t send packets while pausing a transport
+          once("upgrade", cleanupAndClose[0])
+          once("upgradeError", cleanupAndClose[0])
+        }
       }
 
     if ("opening" == readyState || "open" == readyState) {
@@ -629,13 +612,9 @@ class EngineSocket : EventEmitter {
     return this
   }
 
-  /**
-   * Called upon transport error ///
-   *
-   * @api private
-   */
+  /** Called upon transport error */
   fun onError(_err: Any?) {
-    var err: String
+    val err: String
     if (_err is String) {
       err = _err
     } else {
@@ -648,21 +627,17 @@ class EngineSocket : EventEmitter {
     onClose("transport error", err)
   }
 
-  /**
-   * Called upon transport close. ///
-   *
-   * @api private
-   */
+  /** Called upon transport close */
   fun onClose(reason: String, desc: String) {
     if ("opening" == readyState || "open" == readyState || "closing" == readyState) {
       Logger.warn("socket close with reason: $reason")
 
       // clear timers
-      //      pingIntervalTimer?.cancel();
-      //      pingTimeoutTimer?.cancel();
+      pingIntervalTimer?.cancel()
+      pingTimeoutTimer?.cancel()
 
       // stop event from firing again for transport
-      //      transport?.off("close");
+      transport?.off(EVENT_CLOSE, null)
 
       // ensure transport won"t stay open
       transport?.close()
@@ -681,7 +656,7 @@ class EngineSocket : EventEmitter {
 
       // clean buffers after, so users can still
       // grab the buffers on `close` event
-      writeBuffer = mutableListOf<Any>()
+      writeBuffer.clear()
       prevBufferLen = 0
     }
   }

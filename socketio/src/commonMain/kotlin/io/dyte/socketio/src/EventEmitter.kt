@@ -58,7 +58,7 @@ open class EventEmitter {
   }
 
   /** This function attempts to unbind the [handler] from the [event] */
-  fun off(event: String, handler: (data: Any?) -> Unit) {
+  fun off(event: String, handler: ((data: Any?) -> Unit)?) {
     if (handler != null) {
       this._events[event]?.remove(handler)
       this._eventsOnce[event]?.remove(handler)

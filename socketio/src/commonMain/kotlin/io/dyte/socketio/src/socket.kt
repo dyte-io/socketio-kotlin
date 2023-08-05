@@ -305,7 +305,7 @@ class SocketClient(io: Manager, nsp: String, opts: ManagerOptions) : EventEmitte
         } else {
           emit(
             "connect_error",
-            "It seems you are trying to reach a Socket.IO server in v2.x with a v3.x client, but they are not compatible (more information here: https://socket.io/docs/v3/migrating-from-2-x-to-3-0/)"
+            "It seems you are trying to reach a Socket.IO server in v2.x with a v3.x+ client, but they are not compatible (more information here: https://socket.io/docs/v3/migrating-from-2-x-to-3-0/)"
           )
         }
       }
