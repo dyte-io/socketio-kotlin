@@ -161,7 +161,10 @@ class ConnectionTest : Connection("client") {
     val correct = listOf("てすと", "Я Б Г Д Ж Й", "Ä ä Ü ü ß", "utf8 — string", "utf8 — string")
     val socket = client()
     socket.onConnect {
-      socket.onEvent("echoBack") { data -> values.offer(data[0].asString()) }
+      socket.onEvent("echoBack") { data ->
+        println("Got echoBack: ${data[0].asString()}")
+        values.offer(data[0].asString())
+      }
       for (data in correct) {
         socket.emit("echo", data)
       }
@@ -196,6 +199,42 @@ class ConnectionTest : Connection("client") {
         500
       )
     values.take()
+  }
+
+  @Test(timeout = 28000.toLong())
+  @Throws(InterruptedException::class)
+  fun connectionStateFlow() {
+    val values: BlockingQueue<String> = LinkedBlockingQueue()
+    val socket = client()
+
+    socket.io.on(
+      Manager.EVENT_RECONNECT,
+      fun(_) {
+        println("1 Reconnected")
+        values.offer("reconnected")
+      }
+    )
+    socket.onConnect {
+      println("1 connected")
+      values.offer("connected")
+    }
+    socket.onDisconnect {
+      values.offer("disconnected")
+    }
+    socket.open()
+    Timer()
+      .schedule(
+        object : TimerTask() {
+          override fun run() {
+            socket.io.engine.close()
+          }
+        },
+        1000
+      )
+    assertEquals("connected", values.take())
+    assertEquals("disconnected", values.take())
+    assertEquals("reconnected", values.take())
+    assertEquals("connected", values.take())
   }
 
   @Test(timeout = TIMEOUT.toLong())

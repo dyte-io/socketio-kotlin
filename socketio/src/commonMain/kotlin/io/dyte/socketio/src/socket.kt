@@ -20,7 +20,7 @@ class SocketClient(io: Manager, nsp: String, opts: ManagerOptions) : EventEmitte
   var BINARY_ACK = 6
 
   var EVENTS =
-    listOf<String>(
+    listOf(
       "connect",
       "connect_error",
       "connect_timeout",
@@ -121,7 +121,16 @@ class SocketClient(io: Manager, nsp: String, opts: ManagerOptions) : EventEmitte
 
   fun onConnect(callback: () -> Unit) {
     on(
-      "connect",
+      EVENT_CONNECT,
+      fun(_) {
+        callback()
+      }
+    )
+  }
+
+  fun onDisconnect(callback: () -> Unit) {
+    on(
+      EVENT_DISCONNECT,
       fun(_) {
         callback()
       }
@@ -188,7 +197,7 @@ class SocketClient(io: Manager, nsp: String, opts: ManagerOptions) : EventEmitte
     if (EVENTS.contains(event)) {
       super.emit(event, data)
     } else {
-      var sendData = mutableListOf<JsonElement>(JsonPrimitive(event))
+      val sendData = mutableListOf<JsonElement>(JsonPrimitive(event))
 
       if (data is List<*>) {
         data.forEach { utils.handlePrimitive(sendData, it) }
@@ -196,7 +205,7 @@ class SocketClient(io: Manager, nsp: String, opts: ManagerOptions) : EventEmitte
         utils.handlePrimitive(sendData, data)
       }
 
-      var packet = ClientPacket(EVENT, sendData)
+      val packet = ClientPacket(EVENT, sendData)
       //                "options" to mutableMapOf<String, Boolean>("compress" to
       // flags.getOrElse("compress") { "false "} as Boolean)
 
@@ -206,8 +215,7 @@ class SocketClient(io: Manager, nsp: String, opts: ManagerOptions) : EventEmitte
         acks["$ids"] = ack
         packet.id = ids++
       }
-      val isTransportWritable =
-        io.engine != null && io.engine.transport != null && io.engine.transport?.writable == true
+      val isTransportWritable = io.engine.transport != null && io.engine.transport?.writable == true
 
       val discardPacket = flags.get("volatile") != null && (!isTransportWritable || !connected)
       if (discardPacket) {
@@ -225,9 +233,8 @@ class SocketClient(io: Manager, nsp: String, opts: ManagerOptions) : EventEmitte
    * Sends a packet.
    *
    * @param {Object} packet
-   * @api private
    */
-  fun packet(packet: ClientPacket<*>) {
+  private fun packet(packet: ClientPacket<*>) {
     packet.nsp = nsp
     io.packet(packet)
   }
@@ -235,37 +242,20 @@ class SocketClient(io: Manager, nsp: String, opts: ManagerOptions) : EventEmitte
   /**
    * Called upon engine `open`.
    *
-   * @api private
    */
-  fun onopen(data: Any?) {
+  private fun onopen(data: Any?) {
     Logger.info("transport is open - connecting")
 
-    // write connect packet if necessary
-    // if ("/" != nsp) {
-    // if (query?.isNotEmpty == true) {
-    //   packet({"type": CONNECT, "query": query});
-    // } else {
-    // packet({"type": CONNECT});
-    // }
-    // }
 
     if (auth != null) {
-      if (auth is Function1<*, *>) {
-        (auth as Function1<Any, Unit>).invoke(
-          fun(data: Any) {
-            packet(ClientPacket(CONNECT, data))
-          }
-        )
-      } else {
-        packet(ClientPacket(CONNECT, auth))
-      }
+      packet(ClientPacket(CONNECT, auth))
     } else {
       packet(ClientPacket<Any>(CONNECT))
     }
   }
 
   /** Called upon engine or manager `error` */
-  fun onerror(err: Any?) {
+  private fun onerror(err: Any?) {
     if (!connected) {
       emit("connect_error", err)
     }
@@ -275,9 +265,8 @@ class SocketClient(io: Manager, nsp: String, opts: ManagerOptions) : EventEmitte
    * Called upon engine `close`.
    *
    * @param {String} reason
-   * @api private
    */
-  fun onclose(data: Any?) {
+  private fun onclose(data: Any?) {
     val reason = data as String
     Logger.warn("Socket close ($reason)")
     emit("disconnecting", reason)
@@ -291,9 +280,8 @@ class SocketClient(io: Manager, nsp: String, opts: ManagerOptions) : EventEmitte
    * Called with socket packet.
    *
    * @param {Object} packet
-   * @api private
    */
-  fun onpacket(_packet: Any?) {
+  private fun onpacket(_packet: Any?) {
     val packet = _packet as ClientPacket<*>
     if (packet.nsp != nsp) return
     Logger.debug("onPacket socket ${packet.type}")
@@ -321,11 +309,10 @@ class SocketClient(io: Manager, nsp: String, opts: ManagerOptions) : EventEmitte
   /**
    * Subscribe to open, close and packet events
    *
-   * @api private
    */
-  fun subEvents() {
+  private fun subEvents() {
     if (subs?.isNotEmpty() == true) return
-    var io = this.io
+    val io = this.io
     subs =
       mutableListOf(
         Util.on(io, "open", ::onopen),
@@ -339,12 +326,11 @@ class SocketClient(io: Manager, nsp: String, opts: ManagerOptions) : EventEmitte
    * Called upon a server event.
    *
    * @param {Object} packet
-   * @api private
    */
-  fun onevent(packet: ClientPacket<*>) {
+  private fun onevent(packet: ClientPacket<*>) {
     val args = ((packet.data ?: buildJsonArray {}) as JsonArray).toMutableList<Any>()
 
-    if (null != packet.id) {
+    if (packet.id != null) {
       args.add(ack(packet.id))
     }
     Logger.debug("onEvent size ${args.size} $connected")
@@ -367,7 +353,7 @@ class SocketClient(io: Manager, nsp: String, opts: ManagerOptions) : EventEmitte
    *
    * @api private
    */
-  fun ack(id: Int): (Any) -> Unit {
+  private fun ack(id: Int): (Any) -> Unit {
     var sent = false
     return fun(data: Any?) {
       // prevent double callbacks
@@ -375,7 +361,7 @@ class SocketClient(io: Manager, nsp: String, opts: ManagerOptions) : EventEmitte
       sent = true
       Logger.info("sending ack $data")
 
-      var sendData = mutableListOf<JsonElement>()
+      val sendData = mutableListOf<JsonElement>()
       if (data is List<*>) {
         data.forEach { utils.handlePrimitive(sendData, it) }
       } else {
@@ -388,17 +374,16 @@ class SocketClient(io: Manager, nsp: String, opts: ManagerOptions) : EventEmitte
   }
 
   /**
-   * Called upon a server acknowlegement.
+   * Called upon a server acknowledgement.
    *
    * @param {Object} packet
-   * @api private
    */
-  fun onack(packet: ClientPacket<*>) {
-    var ack_ = acks.remove("${packet.id}")
+  private fun onack(packet: ClientPacket<*>) {
+    val ack_ = acks.remove("${packet.id}")
     if (ack_ is Function1<*, *>) {
       Logger.info("calling ack ${packet.id} with ${packet.data}")
 
-      var args = packet.data as JsonArray
+      val args = packet.data as JsonArray
       ack_(ArrayList(args.toList()))
     } else {
       Logger.warn("bad ack ${packet.id}")
@@ -408,9 +393,8 @@ class SocketClient(io: Manager, nsp: String, opts: ManagerOptions) : EventEmitte
   /**
    * Called upon server connect.
    *
-   * @api private
    */
-  fun onconnect(id: String) {
+  private fun onconnect(id: String) {
     this.id = id
     connected = true
     disconnected = false
@@ -421,23 +405,21 @@ class SocketClient(io: Manager, nsp: String, opts: ManagerOptions) : EventEmitte
   /**
    * Emit buffered events (received and emitted).
    *
-   * @api private
    */
-  fun emitBuffered() {
-    for (i in 0..(receiveBuffer.size - 1)) {
-      val args = receiveBuffer[i]
-      if (args.size > 2) {
-        super.emit(args.first() as String, args.subList(1, args.size))
-      } else {
-        super.emit(args.first() as String, null)
-      }
+  private fun emitBuffered() {
+    println("Emitting buffered")
+    receiveBuffer.forEach { args ->
+      super.emit(
+        args.first().toString().removePrefix("\"").removeSuffix("\""),
+        ArrayList(args.subList(1, args.size))
+      )
     }
-    receiveBuffer = mutableListOf<MutableList<Any>>()
+    receiveBuffer.clear()
 
-    for (i in 0..(sendBuffer.size - 1)) {
-      packet(sendBuffer[i])
+    sendBuffer.forEach {
+        packet(it)
     }
-    sendBuffer = mutableListOf()
+    sendBuffer.clear()
   }
 
   /**
@@ -445,7 +427,7 @@ class SocketClient(io: Manager, nsp: String, opts: ManagerOptions) : EventEmitte
    *
    * @api private
    */
-  fun ondisconnect() {
+  private fun ondisconnect() {
     Logger.warn("server disconnect ($nsp)")
     destroy()
     onclose("io server disconnect")
@@ -455,9 +437,8 @@ class SocketClient(io: Manager, nsp: String, opts: ManagerOptions) : EventEmitte
    * Called upon forced client/server side disconnections, this method ensures the manager stops
    * tracking us and that reconnections don"t get triggered for this.
    *
-   * @api private.
    */
-  fun destroy() {
+  private fun destroy() {
     val _subs = subs
     if (_subs != null && _subs.isNotEmpty()) {
       // clean subscriptions to avoid reconnections
@@ -475,7 +456,6 @@ class SocketClient(io: Manager, nsp: String, opts: ManagerOptions) : EventEmitte
    * Disconnects the socket manually.
    *
    * @return {Socket} self
-   * @api public
    */
   fun close(): SocketClient {
     return disconnect()
