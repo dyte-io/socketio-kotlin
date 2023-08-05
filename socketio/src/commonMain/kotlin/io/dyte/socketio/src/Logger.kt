@@ -1,40 +1,43 @@
 package io.dyte.socketio.src
 
-import io.ktor.util.logging.KtorSimpleLogger
-
 enum class LogLevel {
     ERROR, WARN, INFO, DEBUG
 }
 object Logger {
-    val instance = KtorSimpleLogger("SocketIO")
-    val level = LogLevel.WARN;
+    val instance = "SocketIO"
+    private var level = LogLevel.WARN;
     fun error(message: String) {
-        instance.error(message)
+        println("$instance::error::$message")
     }
 
     fun error(message: String, cause: Throwable) {
-        instance.error(message, cause)
+        println("$instance::error::$message : $cause")
+        cause.printStackTrace()
     }
 
     fun warn(message: String) {
         if(level.ordinal < LogLevel.WARN.ordinal) return
-        instance.error(message)
+        println("$instance::warn::$message")
     }
 
     fun warn(message: String, cause: Throwable) {
         if(level.ordinal < LogLevel.WARN.ordinal) return
-        instance.error(message, cause)
+        println("$instance::warn::$message : $cause")
     }
 
     fun info(message: String) {
         if(level.ordinal < LogLevel.INFO.ordinal) return
-        instance.error(message)
+        println("$instance::info::$message")
     }
 
 
     fun debug(message: String) {
         if(level.ordinal < LogLevel.DEBUG.ordinal) return
-        instance.error(message)
+        println("$instance::debug::$message")
+    }
+
+    fun setLevel(l: LogLevel) {
+        level = l
     }
 
 }
