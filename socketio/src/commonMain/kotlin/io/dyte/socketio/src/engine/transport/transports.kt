@@ -1,4 +1,3 @@
-
 class Transports {
   companion object {
     fun upgradesTo(from: String): List<String> {
@@ -15,7 +14,7 @@ class Transports {
         if (options.forceJSONP != true) {
           return XHRTransport(options, socket)
         } else {
-//          if (options["jsonp"] != false) return JSONPTransport(options);
+          //          if (options["jsonp"] != false) return JSONPTransport(options);
           throw IllegalStateException("JSONP disabled")
         }
       } else {
