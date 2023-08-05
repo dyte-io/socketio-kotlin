@@ -116,8 +116,14 @@ abstract class Transport: EventEmitter {
   */
   open fun onData(data: String) {
     Logger.debug("Transport  $name onData $data")
-    var packet = EnginePacketParser.deserializePacket(data)
+    var packet = EnginePacketParser.decodePacket(data)
       onPacket(packet)
+  }
+
+  open fun onData(data: ByteArray) {
+    Logger.debug("Transport  $name onData $data")
+    var packet = EnginePacketParser.decodePacket(data)
+    onPacket(packet)
   }
 
   /**

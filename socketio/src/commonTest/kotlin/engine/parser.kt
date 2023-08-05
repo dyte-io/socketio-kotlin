@@ -11,21 +11,21 @@ class ParserTest {
 
     @Test
     fun encodeAsString() {
-        val encodedPacket = EnginePacketParser.serializePacket(EnginePacket.Message("test"))
+        val encodedPacket = EnginePacketParser.encodePacket(EnginePacket.Message("test"))
         assertTrue(encodedPacket is String)
     }
 
     @Test
     fun decodeAsPacket() {
-        val data = EnginePacketParser.serializePacket(EnginePacket.Message("test"))
-        assertTrue(EnginePacketParser.deserializePacket(data) is EnginePacket)
+        val data = EnginePacketParser.encodePacket(EnginePacket.Message("test"))
+        assertTrue(EnginePacketParser.decodePacket(data) is EnginePacket)
     }
 
     //
     @Test
     fun noData() {
-        val data = EnginePacketParser.serializePacket(EnginePacket.Message())
-        val decoded = EnginePacketParser.deserializePacket(data)
+        val data = EnginePacketParser.encodePacket(EnginePacket.Message())
+        val decoded = EnginePacketParser.decodePacket(data)
         assertTrue(decoded is EnginePacket.Message)
         assertEquals(null, decoded.payload)
     }

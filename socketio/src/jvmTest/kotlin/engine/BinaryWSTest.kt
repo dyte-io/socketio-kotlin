@@ -10,7 +10,7 @@ import kotlin.test.assertEquals
 
 class BinaryWSTest : Connection("engine") {
 
-    @Test(timeout = 100.toLong())
+    @Test(timeout = TIMEOUT.toLong())
     @Throws(InterruptedException::class)
     fun receiveBinaryData() {
         val values: BlockingQueue<Any> = LinkedBlockingQueue()
@@ -34,7 +34,7 @@ class BinaryWSTest : Connection("engine") {
         socket.close()
     }
 
-    @Test(timeout = 100.toLong())
+    @Test(timeout = TIMEOUT.toLong())
     @Throws(InterruptedException::class)
     fun receiveBinaryDataAndMultibyteUTF8String() {
         val values: BlockingQueue<Any> = LinkedBlockingQueue()

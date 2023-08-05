@@ -95,7 +95,7 @@ abstract class PollingTransport: Transport {
     Logger.debug("polling onData $data")
 
       // decode payload
-    EnginePacketParser.deserializeMultiplePacket(data).forEach {
+    EnginePacketParser.decodeMultiplePacket(data).forEach {
       // if its the first message we consider the transport open
       if ("opening" == self.readyState) {
         self.onOpen()
@@ -161,7 +161,7 @@ abstract class PollingTransport: Transport {
         self.emit("drain")
     }
 
-      val serialized = EnginePacketParser.serializeMultiplePacket(packets)
+      val serialized = EnginePacketParser.encodeMultiplePacket(packets)
     self.doWrite(serialized, callbackfn)
   }
 

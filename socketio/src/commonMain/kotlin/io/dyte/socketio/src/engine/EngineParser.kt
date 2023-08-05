@@ -14,7 +14,7 @@ object EnginePacketParser {
     val ERROR_PACKET = EnginePacket.Error("parser error")
 
     @OptIn(ExperimentalEncodingApi::class)
-    fun serializePacket(
+    fun encodePacket(
         packet: EnginePacket
     ): String {
 
@@ -37,8 +37,12 @@ object EnginePacketParser {
         }
     }
 
+    fun decodePacket(encodedPacket: ByteArray): EnginePacket {
+        return EnginePacket.BinaryMessage(encodedPacket)
+    }
+
     @OptIn(ExperimentalEncodingApi::class)
-    fun deserializePacket(encodedPacket: String?): EnginePacket {
+    fun decodePacket(encodedPacket: String?): EnginePacket {
         if (encodedPacket == null || encodedPacket.isEmpty()) {
             return ERROR_PACKET
         }
@@ -60,9 +64,9 @@ object EnginePacketParser {
         }
     }
 
-    fun serializeMultiplePacket(packets: List<EnginePacket>): String {
+    fun encodeMultiplePacket(packets: List<EnginePacket>): String {
         if (packets.size == 0) return "0:"
-        return packets.map { serializePacket(it) }.joinToString(SEPARATOR.toString())
+        return packets.map { encodePacket(it) }.joinToString(SEPARATOR.toString())
     }
 
     /*
@@ -71,13 +75,13 @@ object EnginePacketParser {
      *
      * @param {String} data
      */
-    fun deserializeMultiplePacket(
+    fun decodeMultiplePacket(
         encodedPayload: String,
     ): MutableList<EnginePacket> {
         var encodedPackets = encodedPayload.split(SEPARATOR)
         var packets = mutableListOf<EnginePacket>()
         for (i in 0..(encodedPackets.size - 1)) {
-            var decodedPacket = deserializePacket(encodedPackets[i])
+            var decodedPacket = decodePacket(encodedPackets[i])
             packets.add(decodedPacket)
             if (decodedPacket is EnginePacket.Error) {
                 break

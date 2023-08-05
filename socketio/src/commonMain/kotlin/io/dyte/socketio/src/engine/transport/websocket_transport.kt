@@ -27,8 +27,6 @@ class WebSocketTransport : Transport {
     constructor(opts: TransportOptions, socket: EngineSocket? = null) : super(opts, socket) {
         var forceBase64 = opts.forceBase64 == true
         supportsBinary = !forceBase64
-//    perMessageDeflate = opts["perMessageDeflate"] as MutableMap<String, Any>;
-//    protocols = opts["protocols"] as MutableList<String>;
     }
 
 
@@ -55,28 +53,29 @@ class WebSocketTransport : Transport {
                 emit("error", err)
             }
         }
-
-
-        // TODO: DYTE
-//    if (ws.binaryType == null) {
-//      supportsBinary = false;
-//    }
-//    ws!.binaryType = "arraybuffer";
-
-        addEventListeners()
     }
 
     fun listen() {
         scope!!.launch {
             while (true) {
                 try {
-
-
-                    val frame = ws?.incoming?.receive()
-                    if (frame is Frame.Text) {
-                        val ft = frame.readText()
-                        Logger.debug("Websocket frame recieved $ft")
-                        onData(ft)
+                    val frame = ws!!.incoming.receive()
+                    Logger.debug("Websocket frame recieved ${frame.frameType}")
+                    when(frame) {
+                        is Frame.Text -> {
+                            val ft = frame.readText()
+                            onData(ft)
+                        }
+                        is Frame.Binary -> {
+                            val ft = frame.readBytes()
+                            onData(ft)
+                        }
+                        is Frame.Close -> {
+                            onClose()
+                            break
+                        } else -> {
+                            println("Received unknown frame type ${frame.frameType}");
+                        }
                     }
                 } catch (e: Exception) {
                     Logger.error("Error while reading websocket frame",e)
@@ -87,17 +86,6 @@ class WebSocketTransport : Transport {
         }
     }
 
-    /// Adds event listeners to the socket
-    ///
-    /// @api private
-    fun addEventListeners() {
-//    ws.incoming
-//      ..onClose.listen((_) => onClose())
-//      ..onMessage.listen((MessageEvent evt) => onData(evt.data))
-//      ..onError.listen((e) {
-//        onError("websocket error");
-//      });
-    }
 
     /// Writes data to socket.
     ///
@@ -112,22 +100,16 @@ class WebSocketTransport : Transport {
         }
 
         var total = packets.size
-        // encodePacket efficient as it uses WS framing
-        // no need for encodePayload
         packets.forEach {
             val packet = it
-            // Sometimes the websocket has already been closed but the browser didn"t
-            // have a chance of informing us about it yet, in that case send will
-            // throw an error
             try {
                 serialScope.launch {
-//                    if (it is EnginePacket.BinaryMessage) {
-//                        print("WS::Binary message ${it.payload}")
-//                        ws?.send(it.payload)
-//                    } else  {
-                        val data = EnginePacketParser.serializePacket(packet)
+                    if (it is EnginePacket.BinaryMessage) {
+                        ws?.send(it.payload)
+                    } else  {
+                        val data = EnginePacketParser.encodePacket(packet)
                         ws?.send(data)
-//                     }
+                     }
                 }
             } catch (e: Error) {
                 Logger.error("websocket closed while writing", e)
