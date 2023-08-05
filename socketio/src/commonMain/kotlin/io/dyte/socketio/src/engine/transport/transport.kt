@@ -61,9 +61,9 @@ abstract class Transport: EventEmitter {
    * @api public
   */
   fun open() {
-    Logger.fine("open0 $name")
+    Logger.info("Transport open() called $name")
     if ("closed" == readyState || "" == readyState) {
-      Logger.fine("open $name")
+      Logger.debug("Opening transport $name")
       readyState = "opening"
         doOpen()
     }
@@ -103,7 +103,7 @@ abstract class Transport: EventEmitter {
   */
   fun onOpen() {
     readyState = "open"
-      Logger.fine("readyState $name $readyState")
+      Logger.info("Transport open: readyState $name $readyState")
     writable = true
       emit("open")
   }
@@ -115,7 +115,7 @@ abstract class Transport: EventEmitter {
    * @api private
   */
   open fun onData(data: String) {
-    Logger.fine("onData $name $data ")
+    Logger.debug("Transport  $name onData $data")
     var packet = EnginePacketParser.deserializePacket(data)
       onPacket(packet)
   }
@@ -134,7 +134,7 @@ abstract class Transport: EventEmitter {
   */
   fun onClose() {
     readyState = "closed"
-      Logger.fine("readyState $readyState $name")
+    Logger.info("Transport $name closed. readyState $readyState ")
     emit("close")
   }
 

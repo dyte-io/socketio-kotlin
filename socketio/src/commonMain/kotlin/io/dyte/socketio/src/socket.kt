@@ -147,9 +147,10 @@ class SocketClient(io: Manager, nsp: String, opts: ManagerOptions): EventEmitter
                     callback(ArrayList(_data.subList(0, data.size -1)), ackElem)
                 } else {
                     callback(_data, null)
+                    callback(_data, null)
                 }
             } else {
-                println("ELSEE::")
+                Logger.warn("Invalid data received for event $event")
             }
         })
     }
@@ -192,7 +193,7 @@ class SocketClient(io: Manager, nsp: String, opts: ManagerOptions): EventEmitter
 
             // event ack callback
             if (ack != null) {
-                Logger.fine("emitting packet with ack id $ids")
+                Logger.info("emitting packet with ack id $ids")
                 acks["$ids"] = ack
                 packet.id = ids++
             }
@@ -201,7 +202,7 @@ class SocketClient(io: Manager, nsp: String, opts: ManagerOptions): EventEmitter
             val discardPacket = flags.get("volatile") != null && (!isTransportWritable || !connected)
             if (discardPacket) {
                 Logger
-                    .fine("discard packet as the transport is not currently writable")
+                    .warn("discard packet as the transport is not currently writable")
             } else if (connected) {
                 this.packet(packet as ClientPacket<*>)
             } else {
@@ -230,7 +231,7 @@ class SocketClient(io: Manager, nsp: String, opts: ManagerOptions): EventEmitter
     */
     fun onopen(data: Any?)
     {
-        Logger.fine("transport is open - connecting")
+        Logger.info("transport is open - connecting")
 
         // write connect packet if necessary
         // if ("/" != nsp) {
@@ -273,7 +274,7 @@ class SocketClient(io: Manager, nsp: String, opts: ManagerOptions): EventEmitter
     fun onclose(data: Any?)
     {
         val reason = data as String
-        Logger.fine("close ($reason)")
+        Logger.warn("Socket close ($reason)")
         emit("disconnecting", reason)
         connected = false
         disconnected = true
@@ -291,7 +292,7 @@ class SocketClient(io: Manager, nsp: String, opts: ManagerOptions): EventEmitter
     {
         val packet = _packet as ClientPacket<*>
         if (packet.nsp != nsp) return
-        Logger.fine("onPacket socket ${packet.type}")
+        Logger.debug("onPacket socket ${packet.type}")
         when(packet.type) {
             CONNECT -> {
                 if (packet.data != null && (packet.data as JsonObject)["sid"] != null) {
@@ -342,14 +343,11 @@ class SocketClient(io: Manager, nsp: String, opts: ManagerOptions): EventEmitter
         if (null != packet.id) {
             args.add(ack(packet.id))
         }
-        Logger.fine("onEvent size ${args.size} $connected")
-        args.forEach {
-            Logger.fine("onEvent ${it}")
-        }
+        Logger.debug("onEvent size ${args.size} $connected")
         if (connected == true) {
             try {
                 super.emit(args.first().toString().removePrefix("\"").removeSuffix("\""), ArrayList(args.subList(1, args.size)))
-            } catch (e: Exception){Logger.fine("args socket error emit $e")}
+            } catch (e: Exception){Logger.error("args socket error emit", e)}
         } else {
             receiveBuffer.add(args)
         }
@@ -366,7 +364,7 @@ class SocketClient(io: Manager, nsp: String, opts: ManagerOptions): EventEmitter
             // prevent double callbacks
             if (sent) return
             sent = true
-            Logger.fine("sending ack $data")
+            Logger.info("sending ack $data")
 
             var sendData = mutableListOf<JsonElement>()
             if (data is List<*>) {
@@ -392,12 +390,12 @@ class SocketClient(io: Manager, nsp: String, opts: ManagerOptions): EventEmitter
     {
         var ack_ = acks.remove("${packet.id}")
         if (ack_ is Function1<*,*>) {
-            Logger.fine("calling ack ${packet.id} with ${packet.data}")
+            Logger.info("calling ack ${packet.id} with ${packet.data}")
 
             var args = packet.data as JsonArray
             ack_(ArrayList(args.toList()))
         } else {
-            Logger.fine("bad ack ${packet.id}")
+            Logger.warn("bad ack ${packet.id}")
         }
     }
 
@@ -445,7 +443,7 @@ class SocketClient(io: Manager, nsp: String, opts: ManagerOptions): EventEmitter
     */
     fun ondisconnect()
     {
-        Logger.fine("server disconnect ($nsp)")
+        Logger.warn("server disconnect ($nsp)")
         destroy()
         onclose("io server disconnect")
     }
@@ -485,7 +483,7 @@ class SocketClient(io: Manager, nsp: String, opts: ManagerOptions): EventEmitter
     fun disconnect(): SocketClient
     {
         if (connected == true) {
-            Logger.fine("performing disconnect ($nsp)")
+            Logger.info("performing disconnect ($nsp)")
             packet(ClientPacket<Any>(DISCONNECT))
         }
 

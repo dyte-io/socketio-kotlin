@@ -45,7 +45,7 @@ abstract class PollingTransport: Transport {
       readyState = "pausing"
 
       var pause = fun () {
-      Logger.fine("paused")
+      Logger.debug("Polling paused")
         self.readyState = "paused"
         onPause()
     }
@@ -54,19 +54,19 @@ abstract class PollingTransport: Transport {
       var total = 0
 
         if (polling == true) {
-        Logger.fine("we are currently polling - waiting to pause")
+          Logger.info("waiting to pause polling")
           total++
           once("pollComplete", fun (d: Any?) {
-          Logger.fine("pre-pause polling complete")
+            Logger.debug("pre-pause polling complete")
             if (--total == 0) pause()
         })
       }
 
       if (writable != true) {
-        Logger.fine("we are currently writing - waiting to pause")
+          Logger.info("write in progress - waiting to pause")
           total++
           once("drain", fun (data: Any? ) {
-          Logger.fine("pre-pause writing complete")
+          Logger.debug("pre-pause writing complete")
             if (--total == 0) pause()
         })
       }
@@ -80,7 +80,7 @@ abstract class PollingTransport: Transport {
     * @api public
   */
   fun poll() {
-    Logger.fine("polling")
+      Logger.debug("Transport poll()")
       polling = true
       doPoll()
       emit("poll")
@@ -92,7 +92,7 @@ abstract class PollingTransport: Transport {
   */
   override fun onData(data: String) {
     var self = this
-      Logger.fine("polling got data $data")
+    Logger.debug("polling onData $data")
 
       // decode payload
     EnginePacketParser.deserializeMultiplePacket(data).forEach {
@@ -117,7 +117,7 @@ abstract class PollingTransport: Transport {
         if ("open" == readyState) {
         poll()
       } else {
-        Logger.fine("ignoring poll - transport state ${readyState}")
+        Logger.warn("ignoring poll - transport state ${readyState}")
       }
     }
   }
@@ -130,19 +130,19 @@ abstract class PollingTransport: Transport {
     var self = this
 
       var _close = fun (data: Any?)  {
-      Logger.fine("writing close packet")
+        Logger.debug("writing close packet")
         self.write(
         listOf(EnginePacket.Close)
       )
     }
 
-      if ("open" == readyState) {
-      Logger.fine("transport open - closing")
+    if ("open" == readyState) {
+        Logger.info("transport open - closing")
         _close(null)
     } else {
       // in case we"re trying to close while
       // handshaking is in progress (GH-164)
-      Logger.fine("transport not open - deferring close")
+      Logger.warn("transport not open - deferring close")
         once("open", _close)
     }
   }
@@ -171,7 +171,6 @@ abstract class PollingTransport: Transport {
   */
   fun uri(): String {
     var query = this.query //TODO: or else
-    Logger.fine("3 ${query.formUrlEncode()}")
     var schema = if(secure)  "https" else "http"
       var port = ""
 

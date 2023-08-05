@@ -34,8 +34,8 @@ class WebSocketTransport : Transport {
 
     override fun doOpen() {
         val ur = this.uri()
-//    var protocols = this.protocols;
-        Logger.fine("WS:: ${this.uri()}")
+
+        Logger.info("Opening websocket ${this.uri()}")
         // TODO: DYTE
         scope = CoroutineScope(Dispatchers.Default)
         scope!!.launch {
@@ -51,7 +51,7 @@ class WebSocketTransport : Transport {
                 onOpen()
                 listen()
             } catch (err: Exception) {
-                Logger.fine("WS:: Error $err")
+                Logger.error("Websocket open error", err)
                 emit("error", err)
             }
         }
@@ -75,11 +75,11 @@ class WebSocketTransport : Transport {
                     val frame = ws?.incoming?.receive()
                     if (frame is Frame.Text) {
                         val ft = frame.readText()
-                        Logger.fine("WS:: recieved $ft")
+                        Logger.debug("Websocket frame recieved $ft")
                         onData(ft)
                     }
                 } catch (e: Exception) {
-                    Logger.fine("WS error $e")
+                    Logger.error("Error while reading websocket frame",e)
                     onClose()
                     break
                 }
@@ -130,7 +130,7 @@ class WebSocketTransport : Transport {
 //                     }
                 }
             } catch (e: Error) {
-                Logger.fine("websocket closed before onclose event")
+                Logger.error("websocket closed while writing", e)
             }
 
             if (--total == 0) done()
@@ -188,8 +188,6 @@ fun uri(): String {
     if (queryString.isNotEmpty()) {
         queryString = "?$queryString"
     }
-
-    println("XX: $queryString")
 
     var ipv6 = hostname.contains(":")
     return schema +

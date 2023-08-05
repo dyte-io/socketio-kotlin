@@ -293,7 +293,6 @@ class ConnectionTest : Connection("client") {
             startTime[0] = Date().time
         })
         manager.on(Manager.EVENT_RECONNECT_ATTEMPT, fun (_) {
-                print("----EVENT_RECONNECT_ATTEMPT")
                 reconnects[0]++
                 val currentTime = Date().time
                 val delay = currentTime - startTime[0]

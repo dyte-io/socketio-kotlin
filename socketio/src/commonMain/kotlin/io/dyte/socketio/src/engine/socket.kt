@@ -106,7 +106,7 @@ class EngineSocket : EventEmitter {
     * @api private
     */
     fun createTransport(name: String, _options: TransportOptions? = null): Transport {
-        Logger.fine("creating transport $name")
+        Logger.debug("Creating transport $name")
         var query = this.query
         // append engine.io protocol identifier
 
@@ -170,7 +170,7 @@ class EngineSocket : EventEmitter {
         try {
             transport = createTransport(transportName)
         } catch (e: Exception) {
-            Logger.fine("e $e")
+            Logger.error("Error opening transport", e)
             transports.removeAt(0)
             open()
             return
@@ -186,10 +186,10 @@ class EngineSocket : EventEmitter {
      * @api private
      */
     fun setTransportInternal(transport: Transport) {
-        Logger.fine("setting transport ${transport.name}")
+        Logger.debug("setTransportInternal ${transport.name}")
 
         if (this.transport != null) {
-            Logger.fine("clearing existing transport ${this.transport?.name}")
+            Logger.warn("setTransportInternal clearing transport ${this.transport?.name}")
             this.transport?.clearListeners()
         }
 
@@ -210,7 +210,7 @@ class EngineSocket : EventEmitter {
      * @api private
      */
     fun probe(name: String) {
-        Logger.fine("probing transport ${name}")
+        Logger.debug("probing transport ${name}")
         var probeTransportOptions = TransportOptions()
         probeTransportOptions.probe = true
         var transport: Transport? = createTransport(name, probeTransportOptions)
@@ -225,7 +225,7 @@ class EngineSocket : EventEmitter {
 //            }
             if (failed) return
 
-            Logger.fine("probe transport $name opened")
+            Logger.info("probe transport $name opened")
             transport?.send(
                 listOf(
                     EnginePacket.Ping("probe")
@@ -235,18 +235,18 @@ class EngineSocket : EventEmitter {
                 if (failed) return
                 val msg = _msg as EnginePacket
                 if (msg is EnginePacket.Pong && msg.payload == "probe") {
-                    Logger.fine("probe transport $name pong")
+                    Logger.debug("probe transport $name pong")
                     upgrading = true
                     emit(EVENT_UPGRADING, transport)
                     if (transport == null) return
                     priorWebsocketSuccess = "websocket" == transport?.name
 
-                    Logger.fine("pausing current transport ${transport?.name}")
+                    Logger.debug("pausing current transport ${transport?.name}")
                     if (this.transport is PollingTransport) {
                         (this.transport as PollingTransport).pause(fun() {
                             if (failed) return
                             if ("closed" == readyState) return
-                            Logger.fine("changing transport and sending upgrade packet")
+                            Logger.info("changing transport and sending upgrade packet")
                             // TODO: Cleanup
 //              cleanup();
                             setTransportInternal(transport!!)
@@ -262,7 +262,7 @@ class EngineSocket : EventEmitter {
                         })
                     }
                 } else {
-                    Logger.fine("probe transport ${name} failed ${msg}")
+                    Logger.warn("probe transport ${name} failed ${msg}")
                     emit(
                         EVENT_UPGRADE_ERROR,
                         mutableMapOf("error" to "probe error", "transport" to transport?.name)
@@ -288,7 +288,7 @@ class EngineSocket : EventEmitter {
             val oldTransport = transport
             freezeTransport()
 
-            Logger.fine("probe transport ${name} failed because of error: $err")
+            Logger.warn("probe transport ${name} failed because of error: $err")
 
             emit(
                 EVENT_UPGRADE_ERROR,
@@ -305,7 +305,7 @@ class EngineSocket : EventEmitter {
         var onupgrade = fun(_to: Any?) {
             val to = _to as Transport?
             if (transport != null && to?.name != transport?.name) {
-                Logger.fine("${to?.name} works - aborting ${transport?.name}")
+                Logger.info("${to?.name} works - aborting ${transport?.name}")
                 freezeTransport()
             }
         }
@@ -335,7 +335,7 @@ class EngineSocket : EventEmitter {
      * @api public
      */
     fun onOpen() {
-        Logger.fine("socket open")
+        Logger.debug("socket open")
         readyState = "open"
         priorWebsocketSuccess = "websocket" == transport?.name
         emit(EVENT_OPEN)
@@ -345,7 +345,7 @@ class EngineSocket : EventEmitter {
         // listener already closed the socket
         // TODO: upgrade to WS
         if ("open" == readyState && upgrade == true && transport is PollingTransport) {
-            Logger.fine("starting upgrade probes")
+            Logger.debug("starting upgrade probes")
             for (i in 0..(upgrades.size - 1)) {
                 probe(upgrades[i])
             }
@@ -381,19 +381,19 @@ class EngineSocket : EventEmitter {
                     onError("server error")
                 }
                 is EnginePacket.Message -> {
-                    Logger.fine("onMessage enginesocket")
+                    Logger.debug("onMessage enginesocket")
                     emit("data", packet.payload)
                     emit(EVENT_MESSAGE, packet.payload)
                 }
                 is EnginePacket.BinaryMessage -> {
-                    Logger.fine("onMessage enginesocket")
+                    Logger.debug("onMessage enginesocket")
                     emit("data", packet.payload)
                     emit(EVENT_MESSAGE, packet.payload)
                 }
                 else -> {}
             }
         } else {
-            Logger.fine("packet received with socket readyState $readyState")
+            Logger.warn("packet received with socket readyState $readyState")
         }
     }
 
@@ -418,7 +418,7 @@ class EngineSocket : EventEmitter {
      */
     fun onHandshake(data: EnginePacket.Open) {
         emit(EVENT_HANDSHAKE, data)
-        Logger.fine("handshake")
+        Logger.debug("onHandshake")
         id = data.sid
         transport!!.query = transport?.query!!.plus(Parameters.build {
             append("sid", data.sid)
@@ -486,9 +486,9 @@ class EngineSocket : EventEmitter {
      * @api private
      */
     fun flush() {
-        Logger.fine("readyState $readyState writable ${transport?.writable} upgrade ${upgrading} writebuffer ${writeBuffer.isNotEmpty()} ")
+        Logger.info("Engine flush")
         if ("closed" != readyState && transport?.writable == true && upgrading != true && writeBuffer.isNotEmpty()) {
-            Logger.fine("flushing ${writeBuffer.size} packets in socket")
+            Logger.debug("flushing ${writeBuffer.size} packets in socket")
             // keep track of current length of writeBuffer
             // splice writeBuffer and callbackBuffer on `drain`
             prevBufferLen = writeBuffer.size
@@ -552,7 +552,7 @@ class EngineSocket : EventEmitter {
     fun close(): EngineSocket {
         var close = fun() {
             onClose("forced close", "")
-            Logger.fine("socket closing - telling transport to close")
+            Logger.info("socket closing - telling transport to close")
             transport?.close()
         }
 
@@ -606,7 +606,7 @@ class EngineSocket : EventEmitter {
             val m = _err as Map<String, String?>
             err = "${m.get("map")} ${m.get("desc")}"
         }
-        Logger.fine("socket error $err")
+        Logger.error("socket error $err")
         priorWebsocketSuccess = false
         emit("error", err)
         onClose("transport error", err)
@@ -619,7 +619,7 @@ class EngineSocket : EventEmitter {
      */
     fun onClose(reason: String, desc: String) {
         if ("opening" == readyState || "open" == readyState || "closing" == readyState) {
-            Logger.fine("socket close with reason: $reason")
+            Logger.warn("socket close with reason: $reason")
 
             // clear timers
 //      pingIntervalTimer?.cancel();

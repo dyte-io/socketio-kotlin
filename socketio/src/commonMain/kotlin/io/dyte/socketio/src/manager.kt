@@ -113,7 +113,6 @@ class Manager: EventEmitter {
     // Only try to reconnect if it"s the first time we"re connecting
     if (!reconnecting && reconnection == true && backoff.attempts == 0) {
       // keeps reconnection from firing twice for the same reconnection loop
-      print("maybeReconnectOnOpen")
       reconnect()
     }
   }
@@ -130,10 +129,10 @@ class Manager: EventEmitter {
   }
 
   fun connect(callback: ((data: Any?) -> Unit)? = null, opt: EngingeSocketOptions): Manager {
-    Logger.fine("readyState $readyState")
+    Logger.info("Manager connect() readyState $readyState")
     if (readyState.contains("open")) return this
 
-    Logger.fine("opening $uri")
+    Logger.debug("Manager opening $uri")
     engine = EngineSocket(uri, opt)
     var socket = engine
     readyState = "opening"
@@ -147,7 +146,7 @@ class Manager: EventEmitter {
 
     // emit `connect_error`
     var errorSub = Util.on(socket, "error", fun (data) {
-      Logger.fine("connect_error")
+      Logger.error("Manager connect_error")
       cleanup()
       readyState = "closed"
       super.emit(EVENT_ERROR, data)
@@ -161,9 +160,9 @@ class Manager: EventEmitter {
 
     // emit `connect_timeout`
     if (timeout > -1) {
-      Logger.fine("connect attempt will timeout after $timeout")
+      Logger.info("connect attempt will timeout after $timeout")
       val timeoutFx = fun () {
-        Logger.fine("connect attempt timed out after $timeout")
+        Logger.debug("connect attempt timed out after $timeout")
         openSubDestroy.destroy()
         socket.emit(EVENT_ERROR, "timeout")
         socket.close()
@@ -192,7 +191,7 @@ class Manager: EventEmitter {
     * @api private
   */
   fun onopen() {
-    Logger.fine("open")
+    Logger.debug("Manager onopen")
 
     // clear old subs
     cleanup()
@@ -235,9 +234,8 @@ class Manager: EventEmitter {
     * @api private
   */
   fun ondata(data: Any?) {
-    Logger.fine("Manager onData0")
+    Logger.debug("Manager onData")
     if (data != null) {
-      Logger.fine("Manager onData1")
       decoder.add(data)
     }
   }
@@ -248,7 +246,7 @@ class Manager: EventEmitter {
     * @api private
   */
   fun ondecoded(packet: Any?) {
-    Logger.fine("Manager onDecoded")
+    Logger.debug("Manager onDecoded")
     emit("packet", packet)
   }
 
@@ -258,7 +256,7 @@ class Manager: EventEmitter {
     * @api private
   */
   fun onerror(err: Any?) {
-    Logger.fine("error $err")
+    Logger.error("Manager error $err")
     emit(EVENT_ERROR, err)
   }
 
@@ -291,7 +289,7 @@ class Manager: EventEmitter {
       val socket = nsps[nsp]
 
       if (socket?.getActive() == true) {
-        Logger.fine("socket $nsp is still active, skipping close")
+        Logger.warn("socket $nsp is still active, skipping close")
         // TODO: check if retun function or loop iteration
         return
       }
@@ -307,7 +305,7 @@ class Manager: EventEmitter {
     * @api private
   */
   fun packet(packet: ClientPacket<*>) {
-    Logger.fine("writing packet $packet")
+    Logger.debug("writing packet ${packet.type}")
 
     // if (encoding != true) {
     // encode, then write to engine with result
@@ -329,7 +327,7 @@ class Manager: EventEmitter {
     * @api private
   */
   fun cleanup() {
-    Logger.fine("cleanup")
+    Logger.debug("Manager cleanup")
 
     var subsLength = subs.size
     for (i in 1..(subsLength-1)) {
@@ -350,7 +348,7 @@ class Manager: EventEmitter {
   }
 
   fun disconnect() {
-    Logger.fine("disconnect")
+    Logger.info("disconnect")
     skipReconnect = true
     reconnecting = false
     if ("open" != readyState) {
@@ -369,7 +367,7 @@ class Manager: EventEmitter {
     * @api private
   */
   fun onclose(error: Any?) {
-    Logger.fine("onclose")
+    Logger.debug("onclose")
 
     cleanup()
     backoff.reset()
@@ -391,21 +389,21 @@ class Manager: EventEmitter {
     if (reconnecting || skipReconnect) return this
 
     if (backoff.attempts >= reconnectionAttempts) {
-      Logger.fine("reconnect failed")
+      Logger.warn("reconnect failed")
       backoff.reset()
       emit(EVENT_RECONNECT_FAILED)
       reconnecting = false
     } else {
       var delay = backoff.duration
-      Logger.fine("will wait %dms before reconnect attempt $delay")
+      Logger.info("will wait %dms before reconnect attempt $delay")
 
       reconnecting = true
       var timer = Timer( delay, fun () {
-        Logger.fine("attempting reconnect 0")
+        Logger.debug("attempting reconnect 0")
         // TODO: RECHECK
         if (skipReconnect) return
 
-        Logger.fine("attempting reconnect")
+        Logger.info("attempting reconnect")
         emit(EVENT_RECONNECT_ATTEMPT, backoff.attempts)
 
         // check again for the case socket closed in above events
@@ -413,13 +411,13 @@ class Manager: EventEmitter {
 
         open(fun (err)  {
           if (err != null) {
-            Logger.fine("reconnect attempt error")
+            Logger.warn("reconnect attempt error")
             reconnecting = false
             reconnect()
 //            emit("reconnect_error", err as MutableMap.get("data"));
             emit("reconnect_error", "")
           } else {
-            Logger.fine("reconnect success")
+            Logger.info("reconnect success")
             onreconnect()
           }
         }, this.options)

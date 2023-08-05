@@ -92,7 +92,7 @@ class XHRTransport: PollingTransport {
    * @api private
   */
   override fun doPoll() {
-    Logger.fine("xhr poll")
+    Logger.debug("xhr doing poll")
       var req = request()
       req.once("data", fun (data: Any?) {
       onData(data as String)
@@ -155,7 +155,7 @@ class Request: EventEmitter {
 
     var self = this
 
-      Logger.fine("xhr open $reqMethod: $uri")
+      Logger.debug("xhr open $reqMethod: $uri")
       GlobalScope.launch {
       try {
         val resp = client.request(uri) {
@@ -180,7 +180,6 @@ class Request: EventEmitter {
 //          timeout { connectTimeoutMillis = requestTimeout }
           if (reqMethod == "POST") {
             setBody(data)
-              println("EEE $data")
           }
         }
 
@@ -203,7 +202,7 @@ class Request: EventEmitter {
         }
       } catch (e: Exception) {
         onError("${e.message}")
-          Logger.fine("XHR Error ${e.message}")
+          Logger.error("XHR Error", e)
         e.printStackTrace()
       }
     }

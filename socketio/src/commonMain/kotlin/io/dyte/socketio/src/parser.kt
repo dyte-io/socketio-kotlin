@@ -51,7 +51,6 @@ class ClientEncoder {
      * @api public
      */
     fun encode(obj: ClientPacket<*>): List<Any> {
-        Logger.fine("encoding packet $obj")
 
         if (ClientParser.EVENT == obj.type || ClientParser.ACK == obj.type) {
 //      if (hasBinary(obj)) {
@@ -100,11 +99,11 @@ class ClientEncoder {
                 } else if (obj.data is List<*>) {
                     str += Json.encodeToString(obj.data as List<JsonElement>)
                 } else {
-                    Logger.fine("Error: encode type not found ${obj.data}")
+                    Logger.warn("Error: encode type not found ${obj.data}")
                 }
             }
 
-            Logger.fine("encoded $obj as $str")
+            Logger.debug("encoded $obj as $str")
             return str
         }
 
@@ -160,7 +159,6 @@ class ClientDecoder : EventEmitter() {
 //        }
             } else {
                 // non-binary full packet
-                Logger.fine("decoded")
                 this.emit("decoded", packet)
             }
 //    } else if (isBinary(obj) || obj is Map && obj["base64"] != null) {
@@ -259,7 +257,6 @@ class ClientDecoder : EventEmitter() {
         }
 
         fun tryParse(type: Int, str: String): Any {
-            Logger.fine("JSON Decoding $str")
             try {
                 when (type) {
                     ClientParser.EVENT, ClientParser.ACK -> return Json.decodeFromString<JsonArray>(
@@ -269,7 +266,7 @@ class ClientDecoder : EventEmitter() {
                     else -> return Json.decodeFromString<JsonObject>(str)
                 }
             } catch (e: Exception) {
-                Logger.fine("JSON Error ${e}")
+                Logger.error("Socket parser. JSON Error", e)
             }
             return mapOf<String, JsonElement>()
         }

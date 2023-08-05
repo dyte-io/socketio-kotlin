@@ -26,7 +26,8 @@ open class EventEmitter {
    */
   open fun emit(event: String, data: Any? = null) {
     val list = (this._events.getOrElse(event) { listOf() }).toList()
-      Logger.fine("${list.size} for $event")
+    Logger.debug("${list.size} event listeners registered for $event")
+
     // todo: try to optimize this. Maybe remember the off() handlers and remove later?
     // handler might be off() inside handler; make a copy first
     list.forEach {

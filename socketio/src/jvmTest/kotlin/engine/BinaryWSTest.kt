@@ -23,7 +23,6 @@ class BinaryWSTest : Connection("engine") {
         opts.transports = mutableListOf<String>("websocket")
         val socket = EngineSocket(_opts = opts)
         socket.on(EngineSocket.EVENT_OPEN, fun(_) {
-            print("WS:: Sending binary 1")
             socket.send(binaryData)
             socket.on(EngineSocket.EVENT_MESSAGE, fun(data: Any?) {
                 if ("hi" == data) return
