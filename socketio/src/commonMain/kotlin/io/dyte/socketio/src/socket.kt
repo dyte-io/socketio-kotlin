@@ -407,7 +407,7 @@ class SocketClient(io: Manager, nsp: String, opts: ManagerOptions) : EventEmitte
    *
    */
   private fun emitBuffered() {
-    println("Emitting buffered")
+    Logger.debug("Emitting buffered")
     receiveBuffer.forEach { args ->
       super.emit(
         args.first().toString().removePrefix("\"").removeSuffix("\""),

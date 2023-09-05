@@ -71,7 +71,7 @@ class WebSocketTransport : Transport {
               break
             }
             else -> {
-              println("Received unknown frame type ${frame.frameType}")
+              Logger.warn("Received unknown frame type ${frame.frameType}")
             }
           }
         } catch (e: Exception) {
