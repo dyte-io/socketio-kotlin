@@ -218,9 +218,7 @@ class ConnectionTest : Connection("client") {
       println("1 connected")
       values.offer("connected")
     }
-    socket.onDisconnect {
-      values.offer("disconnected")
-    }
+    socket.onDisconnect { values.offer("disconnected") }
     socket.open()
     Timer()
       .schedule(

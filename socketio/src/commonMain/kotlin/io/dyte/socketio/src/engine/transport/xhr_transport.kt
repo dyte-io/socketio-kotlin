@@ -2,7 +2,6 @@ import io.dyte.socketio.src.Logger
 import io.dyte.socketio.src.engine.Timer
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
-import io.ktor.client.engine.cio.CIO
 import io.ktor.client.request.headers
 import io.ktor.client.request.request
 import io.ktor.client.request.setBody
@@ -134,7 +133,7 @@ class Request : EventEmitter {
   var isBinary: Boolean? = null
   var supportsBinary: Boolean? = null
   var requestTimeout: Long
-  val client = HttpClient(CIO)
+  val client = HttpClient()
   var reqMethod: String
   var extraHeaders: Map<String, Any>?
 

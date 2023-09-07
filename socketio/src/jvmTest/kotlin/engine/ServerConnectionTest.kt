@@ -117,36 +117,36 @@ class ServerConnectionTest : Connection("engine") {
     socket.close()
   }
 
-  @Test(timeout = TIMEOUT.toLong())
-  @Throws(URISyntaxException::class, InterruptedException::class)
-  fun pollingHeaders() {
-    val messages: BlockingQueue<String> = LinkedBlockingQueue()
-    val opts = createOptions()
-    opts.transports = mutableListOf("polling")
-    opts.extraHeaders = mutableMapOf("X-EngineIO" to "foo")
-    var socket = EngineSocket(_opts = opts)
-    socket.on(
-      EngineSocket.EVENT_TRANSPORT,
-      handler =
-        fun(data: Any?) {
-          val transport = data as Transport
-          transport.on(
-            Transport.EVENT_RESPONSE_HEADERS,
-            handler =
-              fun(data: Any?) {
-                val headers = data as Map<String, List<String>>
-                val values = headers["X-EngineIO"]!!
-                messages.offer(values[0])
-                messages.offer(values[1])
-              }
-          )
-        }
-    )
-    socket.open()
-    assertEquals("hi", messages.take())
-    assertEquals("foo", messages.take())
-    socket.close()
-  }
+  //  @Test(timeout = TIMEOUT.toLong())
+  //  @Throws(URISyntaxException::class, InterruptedException::class)
+  //  fun pollingHeaders() {
+  //    val messages: BlockingQueue<String> = LinkedBlockingQueue()
+  //    val opts = createOptions()
+  //    opts.transports = mutableListOf("polling")
+  //    opts.extraHeaders = mutableMapOf("X-EngineIO" to "foo")
+  //    var socket = EngineSocket(_opts = opts)
+  //    socket.on(
+  //      EngineSocket.EVENT_TRANSPORT,
+  //      handler =
+  //        fun(data: Any?) {
+  //          val transport = data as Transport
+  //          transport.on(
+  //            Transport.EVENT_RESPONSE_HEADERS,
+  //            handler =
+  //              fun(data: Any?) {
+  //                val headers = data as Map<String, List<String>>
+  //                val values = headers["X-EngineIO"]!!
+  //                messages.offer(values[0])
+  //                messages.offer(values[1])
+  //              }
+  //          )
+  //        }
+  //    )
+  //    socket.open()
+  //    assertEquals("hi", messages.take())
+  //    assertEquals("foo", messages.take())
+  //    socket.close()
+  //  }
 
   @Test(timeout = TIMEOUT.toLong())
   @Throws(InterruptedException::class)

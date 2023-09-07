@@ -239,13 +239,9 @@ class SocketClient(io: Manager, nsp: String, opts: ManagerOptions) : EventEmitte
     io.packet(packet)
   }
 
-  /**
-   * Called upon engine `open`.
-   *
-   */
+  /** Called upon engine `open`. */
   private fun onopen(data: Any?) {
     Logger.info("transport is open - connecting")
-
 
     if (auth != null) {
       packet(ClientPacket(CONNECT, auth))
@@ -306,10 +302,7 @@ class SocketClient(io: Manager, nsp: String, opts: ManagerOptions) : EventEmitte
     }
   }
 
-  /**
-   * Subscribe to open, close and packet events
-   *
-   */
+  /** Subscribe to open, close and packet events */
   private fun subEvents() {
     if (subs?.isNotEmpty() == true) return
     val io = this.io
@@ -390,10 +383,7 @@ class SocketClient(io: Manager, nsp: String, opts: ManagerOptions) : EventEmitte
     }
   }
 
-  /**
-   * Called upon server connect.
-   *
-   */
+  /** Called upon server connect. */
   private fun onconnect(id: String) {
     this.id = id
     connected = true
@@ -402,10 +392,7 @@ class SocketClient(io: Manager, nsp: String, opts: ManagerOptions) : EventEmitte
     emitBuffered()
   }
 
-  /**
-   * Emit buffered events (received and emitted).
-   *
-   */
+  /** Emit buffered events (received and emitted). */
   private fun emitBuffered() {
     Logger.debug("Emitting buffered")
     receiveBuffer.forEach { args ->
@@ -416,9 +403,7 @@ class SocketClient(io: Manager, nsp: String, opts: ManagerOptions) : EventEmitte
     }
     receiveBuffer.clear()
 
-    sendBuffer.forEach {
-        packet(it)
-    }
+    sendBuffer.forEach { packet(it) }
     sendBuffer.clear()
   }
 
@@ -436,7 +421,6 @@ class SocketClient(io: Manager, nsp: String, opts: ManagerOptions) : EventEmitte
   /**
    * Called upon forced client/server side disconnections, this method ensures the manager stops
    * tracking us and that reconnections don"t get triggered for this.
-   *
    */
   private fun destroy() {
     val _subs = subs

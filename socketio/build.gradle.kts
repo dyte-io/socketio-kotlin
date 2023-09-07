@@ -46,7 +46,6 @@ kotlin {
     val commonMain by getting {
       dependencies {
         api(libs.ktor.client.core)
-        api(libs.ktor.client.cio)
         api(libs.ktor.client.websockets)
         api(libs.coroutines.core)
         implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.4.1")
