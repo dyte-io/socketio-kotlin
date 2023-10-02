@@ -68,8 +68,6 @@ class SocketClient(io: Manager, nsp: String, opts: ManagerOptions) : EventEmitte
 
   /**
    * "Opens" the socket.
-   *
-   * @api public
    */
   fun open() {
     connect()
@@ -89,7 +87,7 @@ class SocketClient(io: Manager, nsp: String, opts: ManagerOptions) : EventEmitte
    * Sends a `message` event.
    *
    * @return {Socket} self
-   * @api public
+   *
    */
   fun send(args: List<Any>): SocketClient {
     emit("message", args)
@@ -101,7 +99,7 @@ class SocketClient(io: Manager, nsp: String, opts: ManagerOptions) : EventEmitte
    *
    * @param {String} event name
    * @return {Socket} self
-   * @api public
+   *
    */
   fun emit(event: String, vararg data: Any?) {
     if (data.size > 0 && data.last() is Function1<*, *>) {
@@ -187,7 +185,7 @@ class SocketClient(io: Manager, nsp: String, opts: ManagerOptions) : EventEmitte
    * Emits to this client.
    *
    * @return {Socket} self
-   * @api public
+   *
    */
   fun _emitWithAck(
     event: String,
@@ -250,7 +248,9 @@ class SocketClient(io: Manager, nsp: String, opts: ManagerOptions) : EventEmitte
     }
   }
 
-  /** Called upon engine or manager `error` */
+  /**
+   * Called upon engine or manager `error`
+   */
   private fun onerror(err: Any?) {
     if (!connected) {
       emit("connect_error", err)
@@ -302,7 +302,9 @@ class SocketClient(io: Manager, nsp: String, opts: ManagerOptions) : EventEmitte
     }
   }
 
-  /** Subscribe to open, close and packet events */
+  /**
+   * Subscribe to open, close and packet events
+   */
   private fun subEvents() {
     if (subs?.isNotEmpty() == true) return
     val io = this.io
@@ -343,8 +345,6 @@ class SocketClient(io: Manager, nsp: String, opts: ManagerOptions) : EventEmitte
 
   /**
    * Produces an ack callback to emit with an event.
-   *
-   * @api private
    */
   private fun ack(id: Int): (Any) -> Unit {
     var sent = false
@@ -409,8 +409,6 @@ class SocketClient(io: Manager, nsp: String, opts: ManagerOptions) : EventEmitte
 
   /**
    * Called upon server disconnect.
-   *
-   * @api private
    */
   private fun ondisconnect() {
     Logger.warn("server disconnect ($nsp)")
@@ -475,8 +473,8 @@ class SocketClient(io: Manager, nsp: String, opts: ManagerOptions) : EventEmitte
    * Sets the compress flag.
    *
    * @param {Boolean} if `true`, compresses the sending data
-   * @return {Socket} self
-   * @api public
+   * @return {SocketClient} self
+   *
    */
   fun compress(compress: Boolean): SocketClient {
     flags["compress"] = compress

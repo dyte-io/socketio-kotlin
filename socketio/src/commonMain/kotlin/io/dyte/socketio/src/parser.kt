@@ -11,7 +11,7 @@ import kotlinx.serialization.json.JsonObject
 /**
  * A socket.io Encoder instance
  *
- * @api public
+ *
  */
 class ClientParser {
   companion object {
@@ -37,7 +37,7 @@ class ClientEncoder {
    * @param {Object} obj - packet object
    * @param {Function} callback - function to handle encodings (likely engine.write)
    * @return Calls callback with Array of encodings
-   * @api public
+   *
    */
   fun encode(obj: ClientPacket<*>): List<Any> {
 
@@ -57,7 +57,7 @@ class ClientEncoder {
      *
      * @param {Object} packet
      * @return {String} encoded
-     * @api private
+     *
      */
     fun encodeAsString(obj: ClientPacket<*>): String {
       // first is type
@@ -102,7 +102,7 @@ class ClientEncoder {
      *
      * @param {Object} packet
      * @return {Buffer} encoded
-     * @api private
+     *
      */
     //    fun encodeAsBinary(obj: MutableMap<String,Any>): Buffer { // TODO:  BUFFER
     //      val deconstruction = Binary.deconstructPacket(obj);
@@ -120,7 +120,7 @@ class ClientEncoder {
  * A socket.io Decoder instance
  *
  * @return {Object} decoder
- * @api public
+ *
  */
 class ClientDecoder : EventEmitter() {
   //  dynamic reconstructor = null;
@@ -130,7 +130,7 @@ class ClientDecoder : EventEmitter() {
    *
    * @param {String} obj - encoded packet
    * @return {Object} packet
-   * @api public
+   *
    */
   fun add(obj: Any) {
     var packet: ClientPacket<Any>
@@ -172,7 +172,7 @@ class ClientDecoder : EventEmitter() {
      *
      * @param {String} str
      * @return {Object} packet
-     * @api private
+     *
      */
     fun decodeString(str: String): ClientPacket<Any> {
       var i = 0
@@ -272,7 +272,7 @@ class ClientDecoder : EventEmitter() {
     /**
      * Deallocates a parser"s resources
      *
-     * @api public
+     *
      */
     fun destroy() {
       //    if (this.reconstructor != null) {
@@ -287,7 +287,7 @@ class ClientDecoder : EventEmitter() {
  *
  * @param {Object} packet
  * @return {BinaryReconstructor} initialized reconstructor
- * @api private
+ *
  */
 // class BinaryReconstructor {
 //  Map? reconPack;
@@ -303,7 +303,7 @@ class ClientDecoder : EventEmitter() {
 //   * @param {Buffer | ArrayBuffer} binData - the raw binary data received
 //   * @return {null | Object} returns null if more binary data is expected or
 //   *   a reconstructed packet object if all buffers have been received.
-//   * @api private
+//   *
 //   */
 //  takeBinaryData(binData) {
 //    this.buffers.add(binData);
@@ -319,7 +319,7 @@ class ClientDecoder : EventEmitter() {
 //
 //  /** Cleans up binary packet reconstruction variables.
 //   *
-//   * @api private
+//   *
 //   */
 //  void finishedReconstruction() {
 //    this.reconPack = null;

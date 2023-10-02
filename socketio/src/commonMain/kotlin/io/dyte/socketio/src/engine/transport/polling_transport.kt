@@ -15,7 +15,7 @@ abstract class PollingTransport : Transport {
    * Polling interface.
    *
    * @param {Object} opts
-   * @api private
+   *
    */
   constructor(opts: TransportOptions, socket: EngineSocket?) : super(opts, socket) {
     var forceBase64 = opts.forceBase64 == true
@@ -27,8 +27,6 @@ abstract class PollingTransport : Transport {
   /**
    * Opens the socket (triggers polling). We write a PING message to determine when the transport is
    * open.
-   *
-   * @api private
    */
   override fun doOpen() {
     poll()
@@ -38,7 +36,7 @@ abstract class PollingTransport : Transport {
    * Pauses polling.
    *
    * @param {Function} callback upon buffers are flushed and transport is paused
-   * @api private
+   *
    */
   fun pause(onPause: () -> Unit) {
     var self = this
@@ -85,8 +83,6 @@ abstract class PollingTransport : Transport {
 
   /**
    * Starts polling cycle.
-   *
-   * @api public
    */
   fun poll() {
     Logger.debug("Transport poll()")
@@ -97,8 +93,6 @@ abstract class PollingTransport : Transport {
 
   /**
    * Overloads onData to detect payloads.
-   *
-   * @api private
    */
   override fun onData(data: String) {
     var self = this
@@ -134,8 +128,6 @@ abstract class PollingTransport : Transport {
 
   /**
    * For polling, send a close packet.
-   *
-   * @api private
    */
   override fun doClose() {
     var self = this
@@ -162,7 +154,7 @@ abstract class PollingTransport : Transport {
    *
    * @param {List} data packets
    * @param {Function} drain callback
-   * @api private
+   *
    */
   override fun write(packets: List<EnginePacket>) {
     var self = this
@@ -179,8 +171,6 @@ abstract class PollingTransport : Transport {
 
   /**
    * Generates uri for connection.
-   *
-   * @api private
    */
   fun uri(): String {
     var query = this.query // TODO: or else

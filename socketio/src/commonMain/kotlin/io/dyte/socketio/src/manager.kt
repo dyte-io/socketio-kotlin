@@ -21,7 +21,7 @@ class Manager : EventEmitter {
    *
    * @param {Boolean} true/false if it should automatically reconnect
    * @return {Manager} self or value
-   * @api public
+   *
    */
   var reconnection = true
 
@@ -30,7 +30,7 @@ class Manager : EventEmitter {
    *
    * @param {Number} max reconnection attempts before giving up
    * @return {Manager} self or value
-   * @api public
+   *
    */
   var reconnectionAttempts = Int.MAX_VALUE
 
@@ -39,7 +39,7 @@ class Manager : EventEmitter {
    *
    * @param {Number} delay
    * @return {Manager} self or value
-   * @api public
+   *
    */
   var reconnectionDelay = 1000L
   var randomizationFactor: Double = 0.5
@@ -50,7 +50,7 @@ class Manager : EventEmitter {
    * Sets the connection timeout. `false` to disable
    *
    * @return {Manager} self or value
-   * @api public
+   *
    */
   var timeout = 20000L
   var backoff: Backoff =
@@ -73,7 +73,8 @@ class Manager : EventEmitter {
     reconnectionDelay = options.reconnectionDelay
     reconnectionDelayMax = options.reconnectionDelayMax
     randomizationFactor = options.randomizationFactor
-    // TODO fix Backoff
+    // TODO:
+    //  fix Backoff
     //    backoff = Backoff(
     //        reconnectionDelay,
     //        reconnectionDelayMax,
@@ -84,12 +85,13 @@ class Manager : EventEmitter {
     autoConnect = options.autoConnect != false
     if (autoConnect) open(opt = options)
   }
+
   /**
    * Sets the maximum delay between reconnections.
    *
    * @param {Number} delay
    * @return {Manager} self or value
-   * @api public
+   *
    */
   companion object {
     val EVENT_RECONNECT_ATTEMPT = "reconnect_attempt"
@@ -105,8 +107,6 @@ class Manager : EventEmitter {
 
   /**
    * Starts trying to reconnect if reconnection is enabled and we have not started reconnecting yet
-   *
-   * @api private
    */
   fun maybeReconnectOnOpen() {
     // Only try to reconnect if it"s the first time we"re connecting
@@ -121,7 +121,7 @@ class Manager : EventEmitter {
    *
    * @param {Function} optional, callback
    * @return {Manager} self
-   * @api public
+   *
    */
   fun open(callback: ((data: Any?) -> Unit)? = null, opt: EngingeSocketOptions) {
     connect(callback = callback, opt = opt)
@@ -203,8 +203,6 @@ class Manager : EventEmitter {
 
   /**
    * Called upon transport open.
-   *
-   * @api private
    */
   fun onopen() {
     Logger.debug("Manager onopen")
@@ -228,26 +226,14 @@ class Manager : EventEmitter {
 
   /**
    * Called upon a ping.
-   *
-   * @api private
    */
   fun onping(data: Any? = null) {
     emit("ping")
   }
-
-  /**
-   * Called upon a packet.
-   *
-   * @api private
-   */
-  //   fun onpong([_]) {
-  //     emitAll("pong", DateTime.now().millisecondsSinceEpoch - lastPing);
-  //   }
+  
 
   /**
    * Called with data.
-   *
-   * @api private
    */
   fun ondata(data: Any?) {
     Logger.debug("Manager onData")
@@ -258,8 +244,6 @@ class Manager : EventEmitter {
 
   /**
    * Called when parser fully decodes a packet.
-   *
-   * @api private
    */
   fun ondecoded(packet: Any?) {
     Logger.debug("Manager onDecoded")
@@ -268,8 +252,6 @@ class Manager : EventEmitter {
 
   /**
    * Called upon socket error.
-   *
-   * @api private
    */
   fun onerror(err: Any?) {
     Logger.error("Manager error $err")
@@ -279,8 +261,8 @@ class Manager : EventEmitter {
   /**
    * Creates a socket for the given `nsp`.
    *
-   * @return {Socket}
-   * @api public
+   * @return {SocketClient}
+   *
    */
   fun socket(nsp: String): SocketClient {
     var socket = nsps[nsp]
@@ -318,7 +300,7 @@ class Manager : EventEmitter {
    * Writes a packet.
    *
    * @param {Object} packet
-   * @api private
+   *
    */
   fun packet(packet: ClientPacket<*>) {
     Logger.debug("writing packet ${packet.type}")
@@ -339,8 +321,6 @@ class Manager : EventEmitter {
 
   /**
    * Clean up transport subscriptions and packet buffer.
-   *
-   * @api private
    */
   fun cleanup() {
     Logger.debug("Manager cleanup")
@@ -356,8 +336,6 @@ class Manager : EventEmitter {
 
   /**
    * Close the current socket.
-   *
-   * @api private
    */
   fun close() {
     disconnect()
@@ -379,8 +357,6 @@ class Manager : EventEmitter {
 
   /**
    * Called upon engine close.
-   *
-   * @api private
    */
   fun onclose(error: Any?) {
     Logger.debug("onclose")
@@ -398,8 +374,6 @@ class Manager : EventEmitter {
 
   /**
    * Attempt a reconnection.
-   *
-   * @api private
    */
   fun reconnect(): Manager {
     if (reconnecting || skipReconnect) return this
@@ -460,8 +434,6 @@ class Manager : EventEmitter {
 
   /**
    * Called upon successful reconnect.
-   *
-   * @api private
    */
   fun onreconnect() {
     var attempt = backoff.attempts
@@ -479,7 +451,7 @@ class Manager : EventEmitter {
  * - `factor` [2]
  *
  * @param {Object} opts
- * @api public
+ *
  */
 class Backoff(min: Long = 100, max: Long = 10000, _jitter: Double = 0.0, factor: Double = 2.0) {
   var ms = min
@@ -492,7 +464,7 @@ class Backoff(min: Long = 100, max: Long = 10000, _jitter: Double = 0.0, factor:
    * Return the backoff duration.
    *
    * @return {Number}
-   * @api public
+   *
    */
   val duration: Long
     get() {
@@ -511,8 +483,6 @@ class Backoff(min: Long = 100, max: Long = 10000, _jitter: Double = 0.0, factor:
 
   /**
    * Reset the number of attempts.
-   *
-   * @api public
    */
   fun reset() {
     attempts = 0
@@ -520,8 +490,6 @@ class Backoff(min: Long = 100, max: Long = 10000, _jitter: Double = 0.0, factor:
 
   /**
    * Set the minimum duration
-   *
-   * @api public
    */
   fun min(m: Long) {
     ms = m
@@ -529,8 +497,6 @@ class Backoff(min: Long = 100, max: Long = 10000, _jitter: Double = 0.0, factor:
 
   /**
    * Set the maximum duration
-   *
-   * @api public
    */
   fun max(m: Long) {
     max = m
@@ -538,8 +504,6 @@ class Backoff(min: Long = 100, max: Long = 10000, _jitter: Double = 0.0, factor:
 
   /**
    * Set the jitter
-   *
-   * @api public
    */
   fun jitter(jitter: Double) {
     if (jitter > 0 && jitter <= 1) {

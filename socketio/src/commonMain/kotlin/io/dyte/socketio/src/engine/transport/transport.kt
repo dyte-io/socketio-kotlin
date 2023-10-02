@@ -47,7 +47,7 @@ abstract class Transport : EventEmitter {
    *
    * @param {String} str
    * @return {Transport} for chaining
-   * @api public
+   *
    */
   fun onError(msg: String, desc: String) {
     emit("error", mapOf<String, String>("msg" to msg, "desc" to desc, "type" to "TransportError"))
@@ -55,8 +55,6 @@ abstract class Transport : EventEmitter {
 
   /**
    * Opens the transport.
-   *
-   * @api public
    */
   fun open() {
     Logger.info("Transport open() called $name")
@@ -69,8 +67,6 @@ abstract class Transport : EventEmitter {
 
   /**
    * Closes the transport.
-   *
-   * @api private
    */
   fun close() {
     if ("opening" == readyState || "open" == readyState) {
@@ -83,7 +79,7 @@ abstract class Transport : EventEmitter {
    * Sends multiple packets.
    *
    * @param {Array} packets
-   * @api private // TOOD List<*>
+   * // TOOD List<*>
    */
   fun send(packets: List<EnginePacket>) {
     if ("open" == readyState) {
@@ -95,8 +91,6 @@ abstract class Transport : EventEmitter {
 
   /**
    * Called upon open
-   *
-   * @api private
    */
   fun onOpen() {
     readyState = "open"
@@ -109,7 +103,7 @@ abstract class Transport : EventEmitter {
    * Called with data.
    *
    * @param {String} data
-   * @api private
+   *
    */
   open fun onData(data: String) {
     Logger.debug("Transport  $name onData $data")
@@ -130,8 +124,6 @@ abstract class Transport : EventEmitter {
 
   /**
    * Called upon close.
-   *
-   * @api private
    */
   fun onClose() {
     readyState = "closed"

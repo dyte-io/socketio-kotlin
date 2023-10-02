@@ -32,20 +32,20 @@ class XHRTransport : PollingTransport {
    * XHR Polling constructor.
    *
    * @param {Object} opts
-   * @api public
+   *
    */
   constructor(opts: TransportOptions, socket: EngineSocket? = null) : super(opts, socket) {
     // requestTimeout = opts["requestTimeout"];
     if (opts.extraHeaders != null) extraHeaders = opts.extraHeaders!!
   }
 
-  /** XHR supports binary */
+  /**
+   * XHR supports binary
+   */
   override var supportsBinary = true
 
   /**
    * Creates a request.
-   *
-   * @api private
    */
   fun request(opts: MutableMap<String, Any> = mutableMapOf<String, Any>()): Request {
     opts["uri"] = uri()
@@ -64,7 +64,7 @@ class XHRTransport : PollingTransport {
    *
    * @param {String} data to send.
    * @param {Function} called upon flush.
-   * @api private
+   *
    */
   override fun doWrite(data: String, fn: (data: Any?) -> Unit) {
     var isBinary = !(data is String)
@@ -89,8 +89,6 @@ class XHRTransport : PollingTransport {
 
   /**
    * Starts a poll cycle.
-   *
-   * @api private
    */
   override fun doPoll() {
     Logger.debug("xhr doing poll")
@@ -115,7 +113,7 @@ class XHRTransport : PollingTransport {
  * Request constructor
  *
  * @param {Object} options
- * @api public
+ *
  */
 class Request : EventEmitter {
   val EVENT_SUCCESS = "success"
@@ -155,8 +153,6 @@ class Request : EventEmitter {
 
   /**
    * Creates the XHR object and sends the request.
-   *
-   * @api private
    */
   fun create() {
 
@@ -222,8 +218,6 @@ class Request : EventEmitter {
 
   /**
    * Called if we have data.
-   *
-   * @api private
    */
   fun onData(data: Any) {
     emit("data", data)
@@ -236,8 +230,6 @@ class Request : EventEmitter {
 
   /**
    * Called upon successful response.
-   *
-   * @api private
    */
   fun onSuccess() {
     emit("success")
@@ -246,8 +238,6 @@ class Request : EventEmitter {
 
   /**
    * Called upon error.
-   *
-   * @api private
    */
   fun onError(err: String) {
     emit("error", err)
@@ -256,37 +246,27 @@ class Request : EventEmitter {
 
   /**
    * Cleans up house.
-   *
-   * @api private
    */
   fun cleanup(fromError: Boolean = false) {
-
-    //    if (fromError != null) {
-    //      try {
-    //        xhr!.abort();
-    //      } catch (e) {
-    //        // ignore
-    //      }
-    //    }
-    //
-    //    xhr = null;
+        if (fromError != null) {
+          try {
+            xhr!.abort();
+          } catch (e) {
+            // ignore
+          }
+        }
+        xhr = null;
   }
 
   /**
    * Check if it has XDomainRequest.
-   *
-   * @api private
    */
   fun hasXDR(): Boolean {
-    // Todo: handle it in dart way
     return false
-    //  return "undefined" !== typeof global.XDomainRequest && !this.xs && this.enablesXDR;
   }
 
   /**
    * Aborts the request.
-   *
-   * @api public
    */
   fun abort() {
     cleanup()

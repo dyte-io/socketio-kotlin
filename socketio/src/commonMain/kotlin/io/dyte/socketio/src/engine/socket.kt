@@ -95,7 +95,7 @@ class EngineSocket : EventEmitter {
     /**
      * Protocol version.
      *
-     * @api public
+     *
      */
     val protocol = EnginePacketParser.protocol // this is an int
   }
@@ -104,7 +104,7 @@ class EngineSocket : EventEmitter {
    * Creates transport of the given type.
    * @param {String} transport name
    * @return {Transport}
-   * @api private
+   *
    */
   fun createTransport(name: String, _options: TransportOptions? = null): Transport {
     Logger.debug("Creating transport $name")
@@ -155,8 +155,6 @@ class EngineSocket : EventEmitter {
 
   /**
    * Initializes transport to use and starts probe. ///
-   *
-   * @api private
    */
   fun open() {
     val transportName: String
@@ -192,8 +190,6 @@ class EngineSocket : EventEmitter {
 
   /**
    * Sets the current transport. Disables the existing one (if any). ///
-   *
-   * @api private
    */
   fun setTransportInternal(transport: Transport) {
     Logger.debug("setTransportInternal ${transport.name}")
@@ -237,7 +233,7 @@ class EngineSocket : EventEmitter {
    * Probes a transport. ///
    *
    * @param {String} transport name
-   * @api private
+   *
    */
   fun probe(name: String) {
     Logger.debug("probing transport ${name}")
@@ -369,8 +365,6 @@ class EngineSocket : EventEmitter {
 
   /**
    * Called when connection is deemed open. ///
-   *
-   * @api public
    */
   fun onOpen() {
     Logger.debug("socket open")
@@ -392,8 +386,6 @@ class EngineSocket : EventEmitter {
 
   /**
    * Handles a packet. ///
-   *
-   * @api private
    */
   fun onPacket(packet: EnginePacket) {
     if ("opening" == readyState || "open" == readyState || "closing" == readyState) {
@@ -470,8 +462,6 @@ class EngineSocket : EventEmitter {
 
   /**
    * Called on `drain` event ///
-   *
-   * @api private
    */
   fun onDrain() {
     writeBuffer = writeBuffer.subList(prevBufferLen, writeBuffer.size)
@@ -490,8 +480,6 @@ class EngineSocket : EventEmitter {
 
   /**
    * Flush write buffers. ///
-   *
-   * @api private
    */
   fun flush() {
     Logger.info("Engine flush")
@@ -517,7 +505,7 @@ class EngineSocket : EventEmitter {
    * @param {Function} callback function.
    * @param {Object} options.
    * @return {Socket} for chaining.
-   * @api public
+   *
    */
   fun write(msg: String, callback: ((data: Any?) -> Unit)? = null): EngineSocket {
     return send(msg, callback)
@@ -539,7 +527,7 @@ class EngineSocket : EventEmitter {
    * @param {String} data.
    * @param {Object} options.
    * @param {Function} callback function.
-   * @api private
+   *
    */
   fun sendPacket(packet: EnginePacket, callback: ((data: Any?) -> Unit)? = null) {
     if ("closing" == readyState || "closed" == readyState) {
@@ -553,8 +541,6 @@ class EngineSocket : EventEmitter {
 
   /**
    * Closes the connection.
-   *
-   * @api private
    */
   fun close(): EngineSocket {
     val close =
@@ -576,8 +562,6 @@ class EngineSocket : EventEmitter {
         close()
       }
     )
-
-    // a workaround for dart to access the local variable;
 
     val waitForUpgrade =
       fun() {
@@ -665,7 +649,7 @@ class EngineSocket : EventEmitter {
    * Filters upgrades, returning only those matching client transports. ///
    *
    * @param {Array} server upgrades
-   * @api private
+   *
    */
   fun filterUpgrades(upgrades: List<String>): List<String> {
     return upgrades.filter { transports.contains(it) }
