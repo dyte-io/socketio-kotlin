@@ -1,12 +1,12 @@
 import io.dyte.socketio.src.ClientPacket
 import io.dyte.socketio.src.Logger
-import io.dyte.socketio.src.engine.isNull
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.buildJsonArray
 
 /**
  * A socket.io Encoder instance
@@ -39,14 +39,7 @@ class ClientEncoder {
    * @return Calls callback with Array of encodings
    *
    */
-  fun encode(obj: ClientPacket<*>): List<Any> {
-
-    if (ClientParser.EVENT == obj.type || ClientParser.ACK == obj.type) {
-      //      if (hasBinary(obj)) {
-      //        obj["type"] = obj["type"] == EVENT ? BINARY_EVENT : BINARY_ACK;
-      //        return encodeAsBinary(obj);
-      //      }
-    }
+  fun encode(obj: ClientPacket): List<String> {
     return listOf(encodeAsString(obj))
   }
 
@@ -59,59 +52,35 @@ class ClientEncoder {
      * @return {String} encoded
      *
      */
-    fun encodeAsString(obj: ClientPacket<*>): String {
+    fun encodeAsString(obj: ClientPacket): String {
       // first is type
-      var str = "${obj.type}"
+      var str = "${obj.toCharType()}"
 
       // attachments if we have them
-      if (ClientParser.BINARY_EVENT == obj.type || ClientParser.BINARY_ACK == obj.type) {
+      if (obj is ClientPacket.BinaryEvent) {
+        str += "${obj.attachments}-"
+      }
+      if (obj is ClientPacket.BinaryAck) {
         str += "${obj.attachments}-"
       }
 
       // if we have a namespace other than `/`
       // we append it followed by a comma `,`
-      if (obj.nsp != null && "/" != obj.nsp) {
-        str += obj.nsp as String + ","
+      if (obj.namespace !=  "/") {
+        str += obj.namespace + ","
       }
 
-      // immediately followed by the id
-      if (obj.id >= 0) {
-        str += "${obj.id}"
-      }
-
-      // json data
-      if (obj.data != null) {
-        if (obj.data is JsonObject) {
-          str += Json.encodeToString(obj.data as JsonObject)
-        } else if (obj.data is JsonArray) {
-          str += Json.encodeToString(obj.data as JsonArray)
-        } else if (obj.data is List<*>) {
-          str += Json.encodeToString(obj.data as List<JsonElement>)
-        } else {
-          Logger.warn("Error: encode type not found ${obj.data}")
+      if(obj is ClientPacket.Message) {
+        // immediately followed by the id
+        obj.ackId?.let {
+          str += "${obj.ackId}"
         }
+        str += Json.encodeToString(obj.payload)
       }
 
       Logger.debug("encoded $obj as $str")
       return str
     }
-
-    /**
-     * Encode packet as "buffer sequence" by removing blobs, and deconstructing packet into object
-     * with placeholders and a list of buffers.
-     *
-     * @param {Object} packet
-     * @return {Buffer} encoded
-     *
-     */
-    //    fun encodeAsBinary(obj: MutableMap<String,Any>): Buffer { // TODO:  BUFFER
-    //      val deconstruction = Binary.deconstructPacket(obj);
-    //      val pack = encodeAsString(deconstruction["packet"]);
-    //      val buffers = deconstruction["buffers"];
-    //
-    //      // add packet info to beginning of data list
-    //      return <dynamic>[pack]..addAll(buffers); // write all the buffers
-    //    }
 
   }
 }
@@ -123,7 +92,6 @@ class ClientEncoder {
  *
  */
 class ClientDecoder : EventEmitter() {
-  //  dynamic reconstructor = null;
 
   /**
    * Decodes an ecoded packet string into packet JSON.
@@ -132,38 +100,9 @@ class ClientDecoder : EventEmitter() {
    * @return {Object} packet
    *
    */
-  fun add(obj: Any) {
-    var packet: ClientPacket<Any>
-    if (obj is String) {
-      packet = decodeString(obj)
-      if (ClientParser.BINARY_EVENT == packet.type || ClientParser.BINARY_ACK == packet.type) {
-        // binary packet"s json
-        //        this.reconstructor = new BinaryReconstructor(packet);
-        //
-        //        // no attachments, labeled binary but no binary data to follow
-        //        if (this.reconstructor.reconPack["attachments"] == 0) {
-        //          this.emit("decoded", packet);
-        //        }
-      } else {
-        // non-binary full packet
-        this.emit("decoded", packet)
-      }
-      //    } else if (isBinary(obj) || obj is Map && obj["base64"] != null) {
-      //      // raw binary data
-      //      if (this.reconstructor == null) {
-      //        throw UnsupportedOperationException(
-      //            "got binary data when not reconstructing a packet");
-      //      } else {
-      //        packet = this.reconstructor.takeBinaryData(obj);
-      //        if (packet != null) {
-      //          // received final buffer
-      //          this.reconstructor = null;
-      //          this.emit("decoded", packet);
-      //        }
-      //      }
-      //    } else {
-      // throw UnsupportedOperationException("Unknown type: " + obj);
-    }
+  fun add(obj: String) {
+    var packet = decodeString(obj)
+    this.emit("decoded", packet)
   }
 
   companion object {
@@ -174,19 +113,22 @@ class ClientDecoder : EventEmitter() {
      * @return {Object} packet
      *
      */
-    fun decodeString(str: String): ClientPacket<Any> {
+    fun decodeString(str: String): ClientPacket {
       var i = 0
       var endLen = str.length - 1
       // look up type
       val type = str[0].digitToInt()
-      var p = ClientPacket<Any>(type)
-
-      if (null == ClientParser.packetTypes[type]) {
-        throw UnsupportedOperationException("unknown packet type " + p.type)
+      if(type < 0 || type > 6) {
+        throw UnsupportedOperationException("Unknown Socket.IO packet type $type")
       }
 
+      var packetNamespace = ""
+      var packetId: Int? = null
+      var packetPayload: JsonElement? = null
+      var packetBinaryAttachments: Int? = null
+
       // look up attachments if type binary
-      if (ClientParser.BINARY_EVENT == p.type || ClientParser.BINARY_ACK == p.type) {
+      if (ClientParser.BINARY_EVENT == type || ClientParser.BINARY_ACK == type) {
         if (!str.contains("-") || str.length <= i + 1) {
           throw UnsupportedOperationException("illegal attachments")
         }
@@ -194,7 +136,7 @@ class ClientDecoder : EventEmitter() {
         while (str[++i] != '-') {
           attachments += str[i]
         }
-        p.attachments = attachments.toInt()
+        packetBinaryAttachments = attachments.toInt()
       }
 
       // look up namespace (if any)
@@ -205,9 +147,9 @@ class ClientDecoder : EventEmitter() {
           var c = str[i]
           if (',' == c) break
         }
-        p.nsp = str.substring(start, i)
+        packetNamespace = str.substring(start, i)
       } else {
-        p.nsp = "/"
+        packetNamespace = "/"
       }
 
       // look up id
@@ -227,46 +169,44 @@ class ClientDecoder : EventEmitter() {
           }
           if (i == str.length) break
         }
-        p.id = str.substring(start, i + 1).toInt()
+        packetId = str.substring(start, i + 1).toInt()
       }
 
       // look up json data
-      if (i < endLen - 1 && str[++i].toString().isNotEmpty() == true) {
-        var payload = tryParse(p.type, str.substring(i))
-        p.data = payload
-        if (isPayloadValid(p.type, p.data as Any).not()) {
-          throw UnsupportedOperationException("invalid payload")
-        }
+      if (i < endLen - 1 && str[++i].toString().isNotEmpty()) {
+        var payload = tryParse(type, str.substring(i))
+        packetPayload = payload
       }
-
-      return p
+      val packet = when (type) {
+        0 -> ClientPacket.Connect(packetNamespace, packetPayload as JsonObject?)
+        1 -> ClientPacket.Disconnect(packetNamespace)
+        2 -> ClientPacket.Event(packetNamespace, packetId, packetPayload as JsonArray)
+        3 -> ClientPacket.Ack(packetNamespace, packetId!!, packetPayload as JsonArray)
+        4 -> ClientPacket.ConnectError(packetNamespace, packetPayload as JsonObject?)
+        5 -> ClientPacket.BinaryEvent(packetNamespace, packetId, packetPayload as JsonArray, packetBinaryAttachments)
+        6 -> ClientPacket.BinaryAck(packetNamespace, packetId!!, packetPayload as JsonArray, packetBinaryAttachments)
+        else -> throw UnsupportedOperationException("Unknown Socket.IO packet type $type")
+      }
+      return packet
     }
 
-    fun tryParse(type: Int, str: String): Any {
+    fun tryParse(type: Int, str: String): JsonElement? {
       try {
-        when (type) {
+        return when (type) {
+          ClientParser.CONNECT,
+          ClientParser.CONNECT_ERROR -> Json.decodeFromString<JsonObject?>(str)
+
+          ClientParser.BINARY_ACK,
+          ClientParser.BINARY_EVENT,
           ClientParser.EVENT,
-          ClientParser.ACK -> return Json.decodeFromString<JsonArray>(str)
-          else -> return Json.decodeFromString<JsonObject>(str)
+          ClientParser.ACK -> Json.decodeFromString<JsonArray>(str)
+
+          else -> throw UnsupportedOperationException("invalid payload")
         }
       } catch (e: Exception) {
         Logger.error("Socket parser. JSON Error", e)
       }
-      return mapOf<String, JsonElement>()
-    }
-
-    fun isPayloadValid(type: Int, payload: Any): Boolean {
-      when (type) {
-        ClientParser.CONNECT -> return payload is JsonObject
-        ClientParser.DISCONNECT -> return payload == null
-        ClientParser.CONNECT_ERROR -> return payload is JsonObject
-        ClientParser.EVENT,
-        ClientParser.BINARY_EVENT ->
-          return payload is JsonArray && payload.size > 0 && payload.getOrNull(0)?.isNull() == false
-        ClientParser.ACK,
-        ClientParser.BINARY_ACK -> return payload is JsonArray
-      }
-      return false
+      return null
     }
 
     /**

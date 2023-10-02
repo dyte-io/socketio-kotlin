@@ -2,11 +2,13 @@ import io.dyte.socketio.src.ClientPacket
 import io.dyte.socketio.src.Logger
 import io.dyte.socketio.src.utils
 import io.ktor.http.*
+import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonArray
+import kotlinx.serialization.json.encodeToJsonElement
 
 typealias ACKFn = Function1<Any?, Unit>?
 
@@ -51,10 +53,10 @@ class SocketClient(io: Manager, nsp: String, opts: ManagerOptions) : EventEmitte
     mutableMapOf<String, ((data: Any?) -> Unit)>()
   var connected = false
   var disconnected = true
-  var sendBuffer = mutableListOf<ClientPacket<*>>()
+  var sendBuffer = mutableListOf<ClientPacket>()
   var receiveBuffer = mutableListOf<MutableList<Any>>()
   val query: Parameters? = opts.query
-  val auth: Any? = opts.auth
+  val auth = opts.auth
   var subs: MutableList<Destroyable>? = mutableListOf<Destroyable>()
   var flags = mutableMapOf<String, Boolean>()
   var id: String? = ""
@@ -102,7 +104,7 @@ class SocketClient(io: Manager, nsp: String, opts: ManagerOptions) : EventEmitte
    *
    */
   fun emit(event: String, vararg data: Any?) {
-    if (data.size > 0 && data.last() is Function1<*, *>) {
+    if (data.isNotEmpty() && data.last() is Function1<*, *>) {
       _emitWithAck(
         event,
         data.toList().subList(0, data.size - 1),
@@ -164,7 +166,6 @@ class SocketClient(io: Manager, nsp: String, opts: ManagerOptions) : EventEmitte
             callback(ArrayList(_data.subList(0, data.size - 1)), ackElem)
           } else {
             callback(_data, null)
-            callback(_data, null)
           }
         } else {
           Logger.warn("Invalid data received for event $event")
@@ -203,15 +204,19 @@ class SocketClient(io: Manager, nsp: String, opts: ManagerOptions) : EventEmitte
         utils.handlePrimitive(sendData, data)
       }
 
-      val packet = ClientPacket(EVENT, sendData)
-      //                "options" to mutableMapOf<String, Boolean>("compress" to
-      // flags.getOrElse("compress") { "false "} as Boolean)
+
+      val packet = ClientPacket.Event()
+      packet.payload = buildJsonArray {
+        sendData.forEach {
+          add(it)
+        }
+      }
 
       // event ack callback
       if (ack != null) {
         Logger.info("emitting packet with ack id $ids")
         acks["$ids"] = ack
-        packet.id = ids++
+        packet.ackId = ids++
       }
       val isTransportWritable = io.engine.transport != null && io.engine.transport?.writable == true
 
@@ -219,7 +224,7 @@ class SocketClient(io: Manager, nsp: String, opts: ManagerOptions) : EventEmitte
       if (discardPacket) {
         Logger.warn("discard packet as the transport is not currently writable")
       } else if (connected) {
-        this.packet(packet as ClientPacket<*>)
+        this.packet(packet)
       } else {
         sendBuffer.add(packet)
       }
@@ -232,8 +237,8 @@ class SocketClient(io: Manager, nsp: String, opts: ManagerOptions) : EventEmitte
    *
    * @param {Object} packet
    */
-  private fun packet(packet: ClientPacket<*>) {
-    packet.nsp = nsp
+  private fun packet(packet: ClientPacket) {
+    packet.namespace = nsp
     io.packet(packet)
   }
 
@@ -242,9 +247,9 @@ class SocketClient(io: Manager, nsp: String, opts: ManagerOptions) : EventEmitte
     Logger.info("transport is open - connecting")
 
     if (auth != null) {
-      packet(ClientPacket(CONNECT, auth))
+      packet(ClientPacket.Connect("", Json.encodeToJsonElement(auth) as JsonObject))
     } else {
-      packet(ClientPacket<Any>(CONNECT))
+      packet(ClientPacket.Connect())
     }
   }
 
@@ -278,13 +283,13 @@ class SocketClient(io: Manager, nsp: String, opts: ManagerOptions) : EventEmitte
    * @param {Object} packet
    */
   private fun onpacket(_packet: Any?) {
-    val packet = _packet as ClientPacket<*>
-    if (packet.nsp != nsp) return
-    Logger.debug("onPacket socket ${packet.type}")
-    when (packet.type) {
-      CONNECT -> {
-        if (packet.data != null && (packet.data as JsonObject)["sid"] != null) {
-          val id = (packet.data as JsonObject)["sid"].toString()
+    val packet = _packet as ClientPacket
+    if (packet.namespace != nsp) return
+    Logger.debug("onPacket socket ${packet}")
+    when (packet) {
+      is ClientPacket.Connect -> {
+        if (packet.payload != null && packet.payload["sid"] != null) {
+          val id = packet.payload["sid"].toString()
           onconnect(id)
         } else {
           emit(
@@ -293,12 +298,12 @@ class SocketClient(io: Manager, nsp: String, opts: ManagerOptions) : EventEmitte
           )
         }
       }
-      EVENT -> onevent(packet)
-      BINARY_EVENT -> onevent(packet)
-      ACK -> onack(packet)
-      BINARY_ACK -> onack(packet)
-      DISCONNECT -> ondisconnect()
-      CONNECT_ERROR -> emit("error", packet.data)
+      is ClientPacket.Event -> onevent(packet)
+      is ClientPacket.BinaryEvent -> onevent(packet)
+      is ClientPacket.Ack -> onack(packet)
+      is ClientPacket.BinaryAck -> onack(packet)
+      is ClientPacket.Disconnect -> ondisconnect()
+      is ClientPacket.ConnectError -> emit("error", packet.errorData)
     }
   }
 
@@ -322,14 +327,14 @@ class SocketClient(io: Manager, nsp: String, opts: ManagerOptions) : EventEmitte
    *
    * @param {Object} packet
    */
-  private fun onevent(packet: ClientPacket<*>) {
-    val args = ((packet.data ?: buildJsonArray {}) as JsonArray).toMutableList<Any>()
+  private fun onevent(packet: ClientPacket.Message) {
+    val args = packet.payload.toMutableList<Any>()
 
-    if (packet.id != null) {
-      args.add(ack(packet.id))
+    packet.ackId?.let {
+      args.add(ack(it))
     }
-    Logger.debug("onEvent size ${args.size} $connected")
-    if (connected == true) {
+
+    if (connected) {
       try {
         super.emit(
           args.first().toString().removePrefix("\"").removeSuffix("\""),
@@ -360,8 +365,12 @@ class SocketClient(io: Manager, nsp: String, opts: ManagerOptions) : EventEmitte
       } else {
         utils.handlePrimitive(sendData, data)
       }
-      val p = ClientPacket(ACK, sendData)
-      p.id = id
+      val sendDataJson = buildJsonArray {
+        sendData.forEach {
+          add(it)
+        }
+      }
+      val p = ClientPacket.Ack("",id,sendDataJson)
       packet(p)
     }
   }
@@ -371,15 +380,15 @@ class SocketClient(io: Manager, nsp: String, opts: ManagerOptions) : EventEmitte
    *
    * @param {Object} packet
    */
-  private fun onack(packet: ClientPacket<*>) {
-    val ack_ = acks.remove("${packet.id}")
+  private fun onack(packet: ClientPacket.Message) {
+    val ack_ = acks.remove("${packet.ackId}")
     if (ack_ is Function1<*, *>) {
-      Logger.info("calling ack ${packet.id} with ${packet.data}")
+      Logger.info("calling ack ${packet.ackId} with ${packet.payload}")
 
-      val args = packet.data as JsonArray
+      val args = packet.payload
       ack_(ArrayList(args.toList()))
     } else {
-      Logger.warn("bad ack ${packet.id}")
+      Logger.warn("bad ack ${packet.ackId}")
     }
   }
 
@@ -422,10 +431,10 @@ class SocketClient(io: Manager, nsp: String, opts: ManagerOptions) : EventEmitte
    */
   private fun destroy() {
     val _subs = subs
-    if (_subs != null && _subs.isNotEmpty()) {
+    if (!_subs.isNullOrEmpty()) {
       // clean subscriptions to avoid reconnections
 
-      for (i in 0..(_subs.size - 1)) {
+      for (i in 0 until _subs.size) {
         _subs[i].destroy()
       }
       subs = null
@@ -446,7 +455,7 @@ class SocketClient(io: Manager, nsp: String, opts: ManagerOptions) : EventEmitte
   fun disconnect(): SocketClient {
     if (connected == true) {
       Logger.info("performing disconnect ($nsp)")
-      packet(ClientPacket<Any>(DISCONNECT))
+      packet(ClientPacket.Disconnect())
     }
 
     // remove socket from pool

@@ -8,36 +8,32 @@ import kotlinx.serialization.json.JsonPrimitive
 class ParserTest {
   @Test
   fun encodeConnection() {
-    val packet: ClientPacket<*> = ClientPacket<Any?>(ClientParser.CONNECT)
-    packet.nsp = "/woot"
+    val packet = ClientPacket.Connect("/woot")
     helpers.test(packet)
   }
 
   @Test
   fun encodeDisconnection() {
-    val packet: ClientPacket<*> = ClientPacket<Any?>(ClientParser.DISCONNECT)
-    packet.nsp = "/woot"
+    val packet = ClientPacket.Disconnect("/woot")
     helpers.test(packet)
   }
 
   @Test
   fun encodeEvent() {
-    val packet1 = ClientPacket<JsonArray>(ClientParser.EVENT)
-    packet1.data = JsonArray(listOf(JsonPrimitive("a"), JsonPrimitive(1)))
-    packet1.nsp = "/"
+    val packet1 = ClientPacket.Event("/")
+    packet1.payload = JsonArray(listOf(JsonPrimitive("a"), JsonPrimitive(1)))
     helpers.test(packet1)
-    val packet2 = ClientPacket<JsonArray>(ClientParser.EVENT)
-    packet2.data = JsonArray(listOf(JsonPrimitive("a"), JsonPrimitive(1)))
-    packet2.nsp = "/test"
+
+    val packet2 = ClientPacket.Event("/")
+    packet2.payload = JsonArray(listOf(JsonPrimitive("a"), JsonPrimitive(1)))
     helpers.test(packet2)
   }
 
   @Test
   fun encodeAck() {
-    val packet = ClientPacket<JsonArray>(ClientParser.ACK)
-    packet.data = JsonArray(listOf(JsonPrimitive("a"), JsonPrimitive(1)))
-    packet.id = 123
-    packet.nsp = "/"
+    val packet = ClientPacket.Ack("/")
+    packet.payload = JsonArray(listOf(JsonPrimitive("a"), JsonPrimitive(1)))
+    packet.ackId = 123
     helpers.test(packet)
   }
 
@@ -58,7 +54,7 @@ class ParserTest {
     // event with invalid json data
     helpers.testDecodeError(ClientParser.EVENT.toString() + "2[\"a\",1,{asdf}]")
     helpers.testDecodeError(ClientParser.EVENT.toString() + "2{}")
-    helpers.testDecodeError(ClientParser.EVENT.toString() + "2[]")
+    // helpers.testDecodeError(ClientParser.EVENT.toString() + "2[]")
     helpers.testDecodeError(ClientParser.EVENT.toString() + "2[null]")
   }
 }

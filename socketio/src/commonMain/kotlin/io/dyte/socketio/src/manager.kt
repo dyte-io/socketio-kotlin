@@ -238,7 +238,7 @@ class Manager : EventEmitter {
   fun ondata(data: Any?) {
     Logger.debug("Manager onData")
     if (data != null) {
-      decoder.add(data)
+      decoder.add(data as String)
     }
   }
 
@@ -302,16 +302,17 @@ class Manager : EventEmitter {
    * @param {Object} packet
    *
    */
-  fun packet(packet: ClientPacket<*>) {
-    Logger.debug("writing packet ${packet.type}")
+  fun packet(packet: ClientPacket) {
+    Logger.debug("writing packet ${packet}")
 
     // if (encoding != true) {
     // encode, then write to engine with result
     // encoding = true;
     var encodedPackets = encoder.encode(packet)
 
-    for (i in 0..(encodedPackets.size - 1)) {
-      engine.write(encodedPackets[i] as String)
+
+    for (element in encodedPackets) {
+      engine.write(element)
     }
     // } else {
     // add packet to the queue
@@ -326,7 +327,7 @@ class Manager : EventEmitter {
     Logger.debug("Manager cleanup")
 
     var subsLength = subs.size
-    for (i in 1..(subsLength - 1)) {
+    for (i in 1 until subsLength) {
       var sub = subs.removeAt(0)
       sub.destroy()
     }
@@ -367,7 +368,7 @@ class Manager : EventEmitter {
     //    emit("close", error.get("reason"));
     emit("close", "")
 
-    if (reconnection == true && !skipReconnect) {
+    if (reconnection && !skipReconnect) {
       reconnect()
     }
   }

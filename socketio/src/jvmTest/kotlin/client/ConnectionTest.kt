@@ -130,7 +130,7 @@ class ConnectionTest : Connection("client") {
           Json.decodeFromString<JsonObject>("{\"test\": true}"),
           fun(_args: Any?) {
             val args = _args as ArrayList<JsonElement>
-            values.offer(args[0].jsonPrimitive.asString())
+            values.offer(args[0].asString())
           }
         )
       } catch (e: Exception) {}

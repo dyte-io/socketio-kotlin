@@ -248,14 +248,14 @@ class Request : EventEmitter {
    * Cleans up house.
    */
   fun cleanup(fromError: Boolean = false) {
-        if (fromError != null) {
-          try {
-            xhr!.abort();
-          } catch (e) {
-            // ignore
-          }
-        }
-        xhr = null;
+//        if (fromError != null) {
+//          try {
+//            xhr!.abort();
+//          } catch (e) {
+//            // ignore
+//          }
+//        }
+//        xhr = null;
   }
 
   /**
