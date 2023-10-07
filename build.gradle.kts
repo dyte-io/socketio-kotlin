@@ -2,7 +2,7 @@ plugins {
   // trick: for the same plugin versions in all sub-modules
   id("com.android.library").version("7.3.1").apply(false)
   kotlin("multiplatform").version("1.9.0").apply(false)
-  id("io.dyte.gradle.plugin.base") version "0.0.1-SNAPSHOT"
+  id("io.dyte.gradle.plugin.base") version "0.0.4"
 }
 
 tasks.register("cleanBuildDir", Delete::class) { delete(rootProject.buildDir) }
