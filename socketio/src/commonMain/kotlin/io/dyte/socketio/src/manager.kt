@@ -21,7 +21,6 @@ class Manager : EventEmitter {
    *
    * @param {Boolean} true/false if it should automatically reconnect
    * @return {Manager} self or value
-   *
    */
   var reconnection = true
 
@@ -30,7 +29,6 @@ class Manager : EventEmitter {
    *
    * @param {Number} max reconnection attempts before giving up
    * @return {Manager} self or value
-   *
    */
   var reconnectionAttempts = Int.MAX_VALUE
 
@@ -39,7 +37,6 @@ class Manager : EventEmitter {
    *
    * @param {Number} delay
    * @return {Manager} self or value
-   *
    */
   var reconnectionDelay = 1000L
   var randomizationFactor: Double = 0.5
@@ -50,7 +47,6 @@ class Manager : EventEmitter {
    * Sets the connection timeout. `false` to disable
    *
    * @return {Manager} self or value
-   *
    */
   var timeout = 20000L
   var backoff: Backoff =
@@ -91,7 +87,6 @@ class Manager : EventEmitter {
    *
    * @param {Number} delay
    * @return {Manager} self or value
-   *
    */
   companion object {
     val EVENT_RECONNECT_ATTEMPT = "reconnect_attempt"
@@ -121,7 +116,6 @@ class Manager : EventEmitter {
    *
    * @param {Function} optional, callback
    * @return {Manager} self
-   *
    */
   fun open(callback: ((data: Any?) -> Unit)? = null, opt: EngingeSocketOptions) {
     connect(callback = callback, opt = opt)
@@ -201,9 +195,7 @@ class Manager : EventEmitter {
     return this
   }
 
-  /**
-   * Called upon transport open.
-   */
+  /** Called upon transport open. */
   fun onopen() {
     Logger.debug("Manager onopen")
 
@@ -224,17 +216,12 @@ class Manager : EventEmitter {
     subs.add(Util.on(decoder, "decoded", ::ondecoded))
   }
 
-  /**
-   * Called upon a ping.
-   */
+  /** Called upon a ping. */
   fun onping(data: Any? = null) {
     emit("ping")
   }
-  
 
-  /**
-   * Called with data.
-   */
+  /** Called with data. */
   fun ondata(data: Any?) {
     Logger.debug("Manager onData")
     if (data != null) {
@@ -242,17 +229,13 @@ class Manager : EventEmitter {
     }
   }
 
-  /**
-   * Called when parser fully decodes a packet.
-   */
+  /** Called when parser fully decodes a packet. */
   fun ondecoded(packet: Any?) {
     Logger.debug("Manager onDecoded")
     emit("packet", packet)
   }
 
-  /**
-   * Called upon socket error.
-   */
+  /** Called upon socket error. */
   fun onerror(err: Any?) {
     Logger.error("Manager error $err")
     emit(EVENT_ERROR, err)
@@ -262,7 +245,6 @@ class Manager : EventEmitter {
    * Creates a socket for the given `nsp`.
    *
    * @return {SocketClient}
-   *
    */
   fun socket(nsp: String): SocketClient {
     var socket = nsps[nsp]
@@ -300,7 +282,6 @@ class Manager : EventEmitter {
    * Writes a packet.
    *
    * @param {Object} packet
-   *
    */
   fun packet(packet: ClientPacket) {
     Logger.debug("writing packet ${packet}")
@@ -309,7 +290,6 @@ class Manager : EventEmitter {
     // encode, then write to engine with result
     // encoding = true;
     var encodedPackets = encoder.encode(packet)
-
 
     for (element in encodedPackets) {
       engine.write(element)
@@ -320,9 +300,7 @@ class Manager : EventEmitter {
     // }
   }
 
-  /**
-   * Clean up transport subscriptions and packet buffer.
-   */
+  /** Clean up transport subscriptions and packet buffer. */
   fun cleanup() {
     Logger.debug("Manager cleanup")
 
@@ -335,9 +313,7 @@ class Manager : EventEmitter {
     //    decoder.destroy();
   }
 
-  /**
-   * Close the current socket.
-   */
+  /** Close the current socket. */
   fun close() {
     disconnect()
   }
@@ -356,9 +332,7 @@ class Manager : EventEmitter {
     engine.close()
   }
 
-  /**
-   * Called upon engine close.
-   */
+  /** Called upon engine close. */
   fun onclose(error: Any?) {
     Logger.debug("onclose")
 
@@ -373,9 +347,7 @@ class Manager : EventEmitter {
     }
   }
 
-  /**
-   * Attempt a reconnection.
-   */
+  /** Attempt a reconnection. */
   fun reconnect(): Manager {
     if (reconnecting || skipReconnect) return this
 
@@ -433,9 +405,7 @@ class Manager : EventEmitter {
     return this
   }
 
-  /**
-   * Called upon successful reconnect.
-   */
+  /** Called upon successful reconnect. */
   fun onreconnect() {
     var attempt = backoff.attempts
     reconnecting = false
@@ -452,7 +422,6 @@ class Manager : EventEmitter {
  * - `factor` [2]
  *
  * @param {Object} opts
- *
  */
 class Backoff(min: Long = 100, max: Long = 10000, _jitter: Double = 0.0, factor: Double = 2.0) {
   var ms = min
@@ -465,7 +434,6 @@ class Backoff(min: Long = 100, max: Long = 10000, _jitter: Double = 0.0, factor:
    * Return the backoff duration.
    *
    * @return {Number}
-   *
    */
   val duration: Long
     get() {
@@ -482,30 +450,22 @@ class Backoff(min: Long = 100, max: Long = 10000, _jitter: Double = 0.0, factor:
       return if (ms <= 0) max else _ms.toLong()
     }
 
-  /**
-   * Reset the number of attempts.
-   */
+  /** Reset the number of attempts. */
   fun reset() {
     attempts = 0
   }
 
-  /**
-   * Set the minimum duration
-   */
+  /** Set the minimum duration */
   fun min(m: Long) {
     ms = m
   }
 
-  /**
-   * Set the maximum duration
-   */
+  /** Set the maximum duration */
   fun max(m: Long) {
     max = m
   }
 
-  /**
-   * Set the jitter
-   */
+  /** Set the jitter */
   fun jitter(jitter: Double) {
     if (jitter > 0 && jitter <= 1) {
       _jitter = jitter

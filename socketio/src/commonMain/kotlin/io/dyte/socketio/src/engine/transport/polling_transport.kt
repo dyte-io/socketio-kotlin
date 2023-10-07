@@ -15,7 +15,6 @@ abstract class PollingTransport : Transport {
    * Polling interface.
    *
    * @param {Object} opts
-   *
    */
   constructor(opts: TransportOptions, socket: EngineSocket?) : super(opts, socket) {
     var forceBase64 = opts.forceBase64 == true
@@ -36,7 +35,6 @@ abstract class PollingTransport : Transport {
    * Pauses polling.
    *
    * @param {Function} callback upon buffers are flushed and transport is paused
-   *
    */
   fun pause(onPause: () -> Unit) {
     var self = this
@@ -81,9 +79,7 @@ abstract class PollingTransport : Transport {
     }
   }
 
-  /**
-   * Starts polling cycle.
-   */
+  /** Starts polling cycle. */
   fun poll() {
     Logger.debug("Transport poll()")
     polling = true
@@ -91,9 +87,7 @@ abstract class PollingTransport : Transport {
     emit("poll")
   }
 
-  /**
-   * Overloads onData to detect payloads.
-   */
+  /** Overloads onData to detect payloads. */
   override fun onData(data: String) {
     var self = this
     Logger.debug("polling onData $data")
@@ -126,9 +120,7 @@ abstract class PollingTransport : Transport {
     }
   }
 
-  /**
-   * For polling, send a close packet.
-   */
+  /** For polling, send a close packet. */
   override fun doClose() {
     var self = this
 
@@ -154,7 +146,6 @@ abstract class PollingTransport : Transport {
    *
    * @param {List} data packets
    * @param {Function} drain callback
-   *
    */
   override fun write(packets: List<EnginePacket>) {
     var self = this
@@ -169,9 +160,7 @@ abstract class PollingTransport : Transport {
     self.doWrite(serialized, callbackfn)
   }
 
-  /**
-   * Generates uri for connection.
-   */
+  /** Generates uri for connection. */
   fun uri(): String {
     var query = this.query // TODO: or else
     var schema = if (secure) "https" else "http"

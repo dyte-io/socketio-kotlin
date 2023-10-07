@@ -32,21 +32,16 @@ class XHRTransport : PollingTransport {
    * XHR Polling constructor.
    *
    * @param {Object} opts
-   *
    */
   constructor(opts: TransportOptions, socket: EngineSocket? = null) : super(opts, socket) {
     // requestTimeout = opts["requestTimeout"];
     if (opts.extraHeaders != null) extraHeaders = opts.extraHeaders!!
   }
 
-  /**
-   * XHR supports binary
-   */
+  /** XHR supports binary */
   override var supportsBinary = true
 
-  /**
-   * Creates a request.
-   */
+  /** Creates a request. */
   fun request(opts: MutableMap<String, Any> = mutableMapOf<String, Any>()): Request {
     opts["uri"] = uri()
     opts["xd"] = xd
@@ -64,7 +59,6 @@ class XHRTransport : PollingTransport {
    *
    * @param {String} data to send.
    * @param {Function} called upon flush.
-   *
    */
   override fun doWrite(data: String, fn: (data: Any?) -> Unit) {
     var isBinary = !(data is String)
@@ -87,9 +81,7 @@ class XHRTransport : PollingTransport {
     sendXhr = req
   }
 
-  /**
-   * Starts a poll cycle.
-   */
+  /** Starts a poll cycle. */
   override fun doPoll() {
     Logger.debug("xhr doing poll")
     var req = request()
@@ -113,7 +105,6 @@ class XHRTransport : PollingTransport {
  * Request constructor
  *
  * @param {Object} options
- *
  */
 class Request : EventEmitter {
   val EVENT_SUCCESS = "success"
@@ -151,9 +142,7 @@ class Request : EventEmitter {
     create()
   }
 
-  /**
-   * Creates the XHR object and sends the request.
-   */
+  /** Creates the XHR object and sends the request. */
   fun create() {
 
     var self = this
@@ -216,9 +205,7 @@ class Request : EventEmitter {
     }
   }
 
-  /**
-   * Called if we have data.
-   */
+  /** Called if we have data. */
   fun onData(data: Any) {
     emit("data", data)
     onSuccess()
@@ -228,46 +215,36 @@ class Request : EventEmitter {
     emit(EVENT_RESPONSE_HEADERS, data)
   }
 
-  /**
-   * Called upon successful response.
-   */
+  /** Called upon successful response. */
   fun onSuccess() {
     emit("success")
     cleanup()
   }
 
-  /**
-   * Called upon error.
-   */
+  /** Called upon error. */
   fun onError(err: String) {
     emit("error", err)
     cleanup(true)
   }
 
-  /**
-   * Cleans up house.
-   */
+  /** Cleans up house. */
   fun cleanup(fromError: Boolean = false) {
-//        if (fromError != null) {
-//          try {
-//            xhr!.abort();
-//          } catch (e) {
-//            // ignore
-//          }
-//        }
-//        xhr = null;
+    //        if (fromError != null) {
+    //          try {
+    //            xhr!.abort();
+    //          } catch (e) {
+    //            // ignore
+    //          }
+    //        }
+    //        xhr = null;
   }
 
-  /**
-   * Check if it has XDomainRequest.
-   */
+  /** Check if it has XDomainRequest. */
   fun hasXDR(): Boolean {
     return false
   }
 
-  /**
-   * Aborts the request.
-   */
+  /** Aborts the request. */
   fun abort() {
     cleanup()
   }

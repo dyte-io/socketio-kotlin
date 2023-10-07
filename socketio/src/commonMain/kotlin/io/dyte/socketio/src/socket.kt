@@ -3,7 +3,6 @@ import io.dyte.socketio.src.Logger
 import io.dyte.socketio.src.utils
 import io.ktor.http.*
 import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
@@ -68,9 +67,7 @@ class SocketClient(io: Manager, nsp: String, opts: ManagerOptions) : EventEmitte
     return subs != null
   }
 
-  /**
-   * "Opens" the socket.
-   */
+  /** "Opens" the socket. */
   fun open() {
     connect()
   }
@@ -89,7 +86,6 @@ class SocketClient(io: Manager, nsp: String, opts: ManagerOptions) : EventEmitte
    * Sends a `message` event.
    *
    * @return {Socket} self
-   *
    */
   fun send(args: List<Any>): SocketClient {
     emit("message", args)
@@ -101,7 +97,6 @@ class SocketClient(io: Manager, nsp: String, opts: ManagerOptions) : EventEmitte
    *
    * @param {String} event name
    * @return {Socket} self
-   *
    */
   fun emit(event: String, vararg data: Any?) {
     if (data.isNotEmpty() && data.last() is Function1<*, *>) {
@@ -186,7 +181,6 @@ class SocketClient(io: Manager, nsp: String, opts: ManagerOptions) : EventEmitte
    * Emits to this client.
    *
    * @return {Socket} self
-   *
    */
   fun _emitWithAck(
     event: String,
@@ -204,13 +198,8 @@ class SocketClient(io: Manager, nsp: String, opts: ManagerOptions) : EventEmitte
         utils.handlePrimitive(sendData, data)
       }
 
-
       val packet = ClientPacket.Event()
-      packet.payload = buildJsonArray {
-        sendData.forEach {
-          add(it)
-        }
-      }
+      packet.payload = buildJsonArray { sendData.forEach { add(it) } }
 
       // event ack callback
       if (ack != null) {
@@ -253,9 +242,7 @@ class SocketClient(io: Manager, nsp: String, opts: ManagerOptions) : EventEmitte
     }
   }
 
-  /**
-   * Called upon engine or manager `error`
-   */
+  /** Called upon engine or manager `error` */
   private fun onerror(err: Any?) {
     if (!connected) {
       emit("connect_error", err)
@@ -307,9 +294,7 @@ class SocketClient(io: Manager, nsp: String, opts: ManagerOptions) : EventEmitte
     }
   }
 
-  /**
-   * Subscribe to open, close and packet events
-   */
+  /** Subscribe to open, close and packet events */
   private fun subEvents() {
     if (subs?.isNotEmpty() == true) return
     val io = this.io
@@ -330,9 +315,7 @@ class SocketClient(io: Manager, nsp: String, opts: ManagerOptions) : EventEmitte
   private fun onevent(packet: ClientPacket.Message) {
     val args = packet.payload.toMutableList<Any>()
 
-    packet.ackId?.let {
-      args.add(ack(it))
-    }
+    packet.ackId?.let { args.add(ack(it)) }
 
     if (connected) {
       try {
@@ -348,9 +331,7 @@ class SocketClient(io: Manager, nsp: String, opts: ManagerOptions) : EventEmitte
     }
   }
 
-  /**
-   * Produces an ack callback to emit with an event.
-   */
+  /** Produces an ack callback to emit with an event. */
   private fun ack(id: Int): (Any) -> Unit {
     var sent = false
     return fun(data: Any?) {
@@ -365,12 +346,8 @@ class SocketClient(io: Manager, nsp: String, opts: ManagerOptions) : EventEmitte
       } else {
         utils.handlePrimitive(sendData, data)
       }
-      val sendDataJson = buildJsonArray {
-        sendData.forEach {
-          add(it)
-        }
-      }
-      val p = ClientPacket.Ack("",id,sendDataJson)
+      val sendDataJson = buildJsonArray { sendData.forEach { add(it) } }
+      val p = ClientPacket.Ack("", id, sendDataJson)
       packet(p)
     }
   }
@@ -416,9 +393,7 @@ class SocketClient(io: Manager, nsp: String, opts: ManagerOptions) : EventEmitte
     sendBuffer.clear()
   }
 
-  /**
-   * Called upon server disconnect.
-   */
+  /** Called upon server disconnect. */
   private fun ondisconnect() {
     Logger.warn("server disconnect ($nsp)")
     destroy()
@@ -483,7 +458,6 @@ class SocketClient(io: Manager, nsp: String, opts: ManagerOptions) : EventEmitte
    *
    * @param {Boolean} if `true`, compresses the sending data
    * @return {SocketClient} self
-   *
    */
   fun compress(compress: Boolean): SocketClient {
     flags["compress"] = compress

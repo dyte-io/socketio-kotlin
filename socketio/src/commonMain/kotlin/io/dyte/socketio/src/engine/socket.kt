@@ -92,11 +92,7 @@ class EngineSocket : EventEmitter {
     val EVENT_HANDSHAKE = "handshake"
     val EVENT_TRANSPORT = "transport"
 
-    /**
-     * Protocol version.
-     *
-     *
-     */
+    /** Protocol version. */
     val protocol = EnginePacketParser.protocol // this is an int
   }
 
@@ -153,9 +149,7 @@ class EngineSocket : EventEmitter {
     return transport
   }
 
-  /**
-   * Initializes transport to use and starts probe. ///
-   */
+  /** Initializes transport to use and starts probe. /// */
   fun open() {
     val transportName: String
     if (this.rememberUpgrade && priorWebsocketSuccess && transports.contains("websocket")) {
@@ -188,9 +182,7 @@ class EngineSocket : EventEmitter {
     setTransportInternal(transport)
   }
 
-  /**
-   * Sets the current transport. Disables the existing one (if any). ///
-   */
+  /** Sets the current transport. Disables the existing one (if any). /// */
   fun setTransportInternal(transport: Transport) {
     Logger.debug("setTransportInternal ${transport.name}")
 
@@ -233,7 +225,6 @@ class EngineSocket : EventEmitter {
    * Probes a transport. ///
    *
    * @param {String} transport name
-   *
    */
   fun probe(name: String) {
     Logger.debug("probing transport ${name}")
@@ -363,9 +354,7 @@ class EngineSocket : EventEmitter {
     transport?.open()
   }
 
-  /**
-   * Called when connection is deemed open. ///
-   */
+  /** Called when connection is deemed open. /// */
   fun onOpen() {
     Logger.debug("socket open")
     readyState = "open"
@@ -384,9 +373,7 @@ class EngineSocket : EventEmitter {
     }
   }
 
-  /**
-   * Handles a packet. ///
-   */
+  /** Handles a packet. /// */
   fun onPacket(packet: EnginePacket) {
     if ("opening" == readyState || "open" == readyState || "closing" == readyState) {
 
@@ -460,9 +447,7 @@ class EngineSocket : EventEmitter {
     resetPingTimeout()
   }
 
-  /**
-   * Called on `drain` event ///
-   */
+  /** Called on `drain` event /// */
   fun onDrain() {
     writeBuffer = writeBuffer.subList(prevBufferLen, writeBuffer.size)
 
@@ -478,9 +463,7 @@ class EngineSocket : EventEmitter {
     }
   }
 
-  /**
-   * Flush write buffers. ///
-   */
+  /** Flush write buffers. /// */
   fun flush() {
     Logger.info("Engine flush")
     if (
@@ -505,7 +488,6 @@ class EngineSocket : EventEmitter {
    * @param {Function} callback function.
    * @param {Object} options.
    * @return {Socket} for chaining.
-   *
    */
   fun write(msg: String, callback: ((data: Any?) -> Unit)? = null): EngineSocket {
     return send(msg, callback)
@@ -527,7 +509,6 @@ class EngineSocket : EventEmitter {
    * @param {String} data.
    * @param {Object} options.
    * @param {Function} callback function.
-   *
    */
   fun sendPacket(packet: EnginePacket, callback: ((data: Any?) -> Unit)? = null) {
     if ("closing" == readyState || "closed" == readyState) {
@@ -539,9 +520,7 @@ class EngineSocket : EventEmitter {
     flush()
   }
 
-  /**
-   * Closes the connection.
-   */
+  /** Closes the connection. */
   fun close(): EngineSocket {
     val close =
       fun() {
@@ -649,7 +628,6 @@ class EngineSocket : EventEmitter {
    * Filters upgrades, returning only those matching client transports. ///
    *
    * @param {Array} server upgrades
-   *
    */
   fun filterUpgrades(upgrades: List<String>): List<String> {
     return upgrades.filter { transports.contains(it) }

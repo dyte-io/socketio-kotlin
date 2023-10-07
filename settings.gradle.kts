@@ -48,13 +48,13 @@ dependencyResolutionManagement {
           name = "Kotlin Native"
           patternLayout {
             listOf(
-              "macos-x86_64",
-              "macos-aarch64",
-              "osx-x86_64",
-              "osx-aarch64",
-              "linux-x86_64",
-              "windows-x86_64",
-            )
+                "macos-x86_64",
+                "macos-aarch64",
+                "osx-x86_64",
+                "osx-aarch64",
+                "linux-x86_64",
+                "windows-x86_64",
+              )
               .forEach { os ->
                 listOf("dev", "releases").forEach { stage ->
                   artifact("$stage/[revision]/$os/[artifact]-[revision].[ext]")
