@@ -12,59 +12,61 @@ interface ExternalLogger {
 
   fun info(message: String)
 
-  fun warn(message: String)
+  fun warn(message: String, cause: Throwable? = null)
 
-  fun error(message: String)
+  fun error(message: String, cause: Throwable? = null)
+}
+
+object StdoutLogger : ExternalLogger {
+  override fun debug(message: String) {
+    println(message)
+  }
+
+  override fun info(message: String) {
+    println(message)
+  }
+
+  override fun warn(message: String, cause: Throwable?) {
+    println(message)
+    cause?.printStackTrace()
+  }
+
+  override fun error(message: String, cause: Throwable?) {
+    println(message)
+    cause?.printStackTrace()
+  }
 }
 
 object Logger {
   val instance = "SocketIO"
   private var level = LogLevel.WARN
-  private lateinit var l: ExternalLogger
+  private var externalLogger: ExternalLogger = StdoutLogger
 
   fun setExternalLogger(l: ExternalLogger) {
-    this.l = l
+    this.externalLogger = l
   }
 
   fun error(message: String, cause: Throwable? = null) {
     val m = "$instance::$message : $cause"
-    if (this::l.isInitialized) {
-      l.error(m)
-    } else {
-      println(m)
-      cause?.printStackTrace()
-    }
+    externalLogger.error(m, cause)
   }
 
   fun warn(message: String, cause: Throwable? = null) {
     if (level.ordinal < LogLevel.WARN.ordinal) return
     val m = "$instance::$message::$cause"
-    if (this::l.isInitialized) {
-      l.warn(m)
-    } else {
-      println(m)
-      cause?.printStackTrace()
-    }
+    externalLogger.warn(m, cause)
   }
 
   fun info(message: String) {
     if (level.ordinal < LogLevel.INFO.ordinal) return
     val m = "$instance::$message"
-    if (this::l.isInitialized) {
-      l.info(m)
-    } else {
-      println(m)
-    }
+    externalLogger.info(m)
   }
 
   fun debug(message: String) {
     if (level.ordinal < LogLevel.DEBUG.ordinal) return
     val m = "$instance::$message"
-    if (this::l.isInitialized) {
-      l.debug(m)
-    } else {
-      println(m)
-    }
+    externalLogger.debug(m)
   }
 
   fun setLevel(l: LogLevel) {
