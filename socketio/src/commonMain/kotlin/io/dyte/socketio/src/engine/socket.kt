@@ -529,7 +529,7 @@ class EngineSocket : EventEmitter {
         transport?.close()
       }
 
-    var cleanupAndClose = arrayListOf<(Any?) -> Unit>()
+    val cleanupAndClose = arrayListOf<(Any?) -> Unit>()
 
     cleanupAndClose.add(
       0,

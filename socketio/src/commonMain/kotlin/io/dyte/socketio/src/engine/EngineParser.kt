@@ -16,7 +16,7 @@ object EnginePacketParser {
   @OptIn(ExperimentalEncodingApi::class)
   fun encodePacket(packet: EnginePacket): String {
 
-    var packetType = "${packet.toCharType()}"
+    val packetType = "${packet.toCharType()}"
     return when (packet) {
       is EnginePacket.Message -> {
         return packetType + (packet.payload ?: "")
@@ -75,10 +75,10 @@ object EnginePacketParser {
   fun decodeMultiplePacket(
     encodedPayload: String,
   ): MutableList<EnginePacket> {
-    var encodedPackets = encodedPayload.split(SEPARATOR)
-    var packets = mutableListOf<EnginePacket>()
-    for (i in 0..(encodedPackets.size - 1)) {
-      var decodedPacket = decodePacket(encodedPackets[i])
+    val encodedPackets = encodedPayload.split(SEPARATOR)
+    val packets = mutableListOf<EnginePacket>()
+    for (element in encodedPackets) {
+      val decodedPacket = decodePacket(element)
       packets.add(decodedPacket)
       if (decodedPacket is EnginePacket.Error) {
         break

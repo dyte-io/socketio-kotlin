@@ -56,8 +56,7 @@ class Manager : EventEmitter {
   var reconnecting = false
 
   lateinit var engine: EngineSocket
-  var encoder = ClientEncoder()
-  var decoder = ClientDecoder()
+
   var autoConnect: Boolean = true
   var skipReconnect: Boolean = false
 
@@ -213,7 +212,6 @@ class Manager : EventEmitter {
     // subs.add(Util.on(socket, "pong", onpong));
     subs.add(Util.on(socket, "error", ::onerror))
     subs.add(Util.on(socket, "close", ::onclose))
-    subs.add(Util.on(decoder, "decoded", ::ondecoded))
   }
 
   /** Called upon a ping. */
@@ -225,14 +223,9 @@ class Manager : EventEmitter {
   fun ondata(data: Any?) {
     Logger.debug("Manager onData")
     if (data != null) {
-      decoder.add(data as String)
+      val packet = ClientParser.decode(data as String)
+      emit("packet", packet)
     }
-  }
-
-  /** Called when parser fully decodes a packet. */
-  fun ondecoded(packet: Any?) {
-    Logger.debug("Manager onDecoded")
-    emit("packet", packet)
   }
 
   /** Called upon socket error. */
@@ -286,18 +279,8 @@ class Manager : EventEmitter {
   fun packet(packet: ClientPacket) {
     Logger.debug("writing packet ${packet}")
 
-    // if (encoding != true) {
-    // encode, then write to engine with result
-    // encoding = true;
-    var encodedPackets = encoder.encode(packet)
-
-    for (element in encodedPackets) {
-      engine.write(element)
-    }
-    // } else {
-    // add packet to the queue
-    // packetBuffer.add(packet);
-    // }
+    var encodedPacket = ClientParser.encode(packet)
+    engine.write(encodedPacket)
   }
 
   /** Clean up transport subscriptions and packet buffer. */
