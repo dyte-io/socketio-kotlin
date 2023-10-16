@@ -1,25 +1,16 @@
 package io.dyte.socketio
 
-class Util {
-  companion object {
-    fun on(obj: EventEmitter, ev: String, fn: (data: Any?) -> Unit): Destroyable {
-      obj.on(ev, fn)
-      return Destroyable(
-        fun() {
-          Logger.debug("DESTROYING event listener for $ev")
-          obj.off(ev, fn)
-        }
-      )
+object Util {
+  fun on(obj: EventEmitter, ev: String, fn: (data: Any?) -> Unit): Destroyable {
+    obj.on(ev, fn)
+    return Destroyable {
+      Logger.debug("DESTROYING event listener for $ev")
+      obj.off(ev, fn)
     }
   }
 }
 
-class Destroyable {
-  var callback: () -> Unit
-
-  constructor(cb: () -> Unit) {
-    this.callback = cb
-  }
+class Destroyable(private val callback: () -> Unit) {
 
   fun destroy() {
     callback()
