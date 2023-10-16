@@ -1,8 +1,5 @@
 package io.dyte.socketio
 
-import Manager
-import ManagerOptions
-import SocketClient
 import io.ktor.http.*
 
 class IO {
