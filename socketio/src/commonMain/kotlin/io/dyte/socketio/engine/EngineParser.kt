@@ -1,6 +1,5 @@
 package io.dyte.socketio.engine
 
-import io.ktor.util.*
 import kotlin.io.encoding.Base64
 import kotlin.io.encoding.ExperimentalEncodingApi
 import kotlinx.serialization.decodeFromString

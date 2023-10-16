@@ -5,7 +5,7 @@ import io.dyte.socketio.Logger
 import io.dyte.socketio.engine.EnginePacket
 import io.dyte.socketio.engine.EnginePacketParser
 import io.dyte.socketio.engine.EngineSocket
-import io.ktor.http.*
+import io.ktor.http.Parameters
 
 abstract class Transport : EventEmitter {
   lateinit var path: String

@@ -3,7 +3,9 @@ package io.dyte.socketio
 import io.dyte.socketio.engine.EngineSocket
 import io.dyte.socketio.engine.EngineSocketOptions
 import io.dyte.socketio.engine.Timer
-import kotlin.math.*
+import kotlin.math.floor
+import kotlin.math.min
+import kotlin.math.pow
 import kotlin.random.Random
 
 /**

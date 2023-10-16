@@ -1,6 +1,7 @@
 package io.dyte.socketio
 
-import io.ktor.http.*
+import io.ktor.http.URLBuilder
+import io.ktor.http.encodedPath
 
 object IO {
   private val cache: MutableMap<String, Manager> = mutableMapOf()

@@ -1,7 +1,11 @@
 package io.dyte.socketio.engine
 
 import kotlin.coroutines.CoroutineContext
-import kotlinx.coroutines.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 class Timer(timeMillis: Long, Fx: () -> Unit) :
   CoroutineScope { // implement CoroutineScope to create local scope

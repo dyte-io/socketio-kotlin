@@ -4,13 +4,25 @@ import io.dyte.socketio.Logger
 import io.dyte.socketio.engine.EnginePacket
 import io.dyte.socketio.engine.EnginePacketParser
 import io.dyte.socketio.engine.EngineSocket
-import io.ktor.client.*
-import io.ktor.client.plugins.websocket.*
-import io.ktor.client.request.*
-import io.ktor.http.*
-import io.ktor.util.date.*
-import io.ktor.websocket.*
-import kotlinx.coroutines.*
+import io.ktor.client.HttpClient
+import io.ktor.client.plugins.websocket.WebSockets
+import io.ktor.client.plugins.websocket.webSocketSession
+import io.ktor.client.request.headers
+import io.ktor.http.Parameters
+import io.ktor.http.formUrlEncode
+import io.ktor.http.plus
+import io.ktor.util.date.GMTDate
+import io.ktor.websocket.Frame
+import io.ktor.websocket.WebSocketSession
+import io.ktor.websocket.close
+import io.ktor.websocket.readBytes
+import io.ktor.websocket.readText
+import io.ktor.websocket.send
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.newSingleThreadContext
+import kotlinx.coroutines.runBlocking
 
 class WebSocketTransport : Transport {
 
