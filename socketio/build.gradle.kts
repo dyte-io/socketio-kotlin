@@ -13,6 +13,8 @@ plugins {
   alias(libs.plugins.gradle.maven.publish)
 }
 
+kotlin.jvmToolchain(11)
+
 mavenPublishing {
   val isCI = providers.environmentVariable("CI").isPresent
   publishToMavenCentral(host = SonatypeHost.S01, automaticRelease = true)
