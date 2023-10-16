@@ -1,5 +1,4 @@
-// Workaround for https://github.com/gradle/gradle/issues/22797, to be fixed in Gradle 8.1
-@file:Suppress("DSL_SCOPE_VIOLATION", "UnstableApiUsage")
+@file:Suppress("UnstableApiUsage")
 
 import com.vanniktech.maven.publish.JavadocJar
 import com.vanniktech.maven.publish.KotlinMultiplatform
