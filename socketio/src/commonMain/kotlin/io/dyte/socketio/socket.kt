@@ -192,9 +192,9 @@ class SocketClient(io: Manager, nsp: String, opts: ManagerOptions) : EventEmitte
       val sendData = mutableListOf<JsonElement>(JsonPrimitive(event))
 
       if (data is List<*>) {
-        data.forEach { utils.handlePrimitive(sendData, it) }
+        data.forEach(sendData::addPrimitive)
       } else {
-        utils.handlePrimitive(sendData, data)
+        sendData.addPrimitive(data)
       }
 
       val packet = ClientPacket.Event()
@@ -341,9 +341,9 @@ class SocketClient(io: Manager, nsp: String, opts: ManagerOptions) : EventEmitte
 
       val sendData = mutableListOf<JsonElement>()
       if (data is List<*>) {
-        data.forEach { utils.handlePrimitive(sendData, it) }
+        data.forEach(sendData::addPrimitive)
       } else {
-        utils.handlePrimitive(sendData, data)
+        sendData.addPrimitive(data)
       }
       val sendDataJson = buildJsonArray { sendData.forEach { add(it) } }
       val p = ClientPacket.Ack("", id, sendDataJson)
@@ -461,5 +461,22 @@ class SocketClient(io: Manager, nsp: String, opts: ManagerOptions) : EventEmitte
   fun compress(compress: Boolean): SocketClient {
     flags["compress"] = compress
     return this
+  }
+}
+
+private fun MutableList<JsonElement>.addPrimitive(primitive: Any?) {
+  when (primitive) {
+    is String -> {
+      add(JsonPrimitive(primitive))
+    }
+    is Boolean -> {
+      add(JsonPrimitive(primitive))
+    }
+    is Number -> {
+      add(JsonPrimitive(primitive))
+    }
+    is JsonElement -> {
+      add(primitive)
+    }
   }
 }
