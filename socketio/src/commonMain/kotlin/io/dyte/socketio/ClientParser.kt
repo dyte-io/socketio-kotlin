@@ -1,3 +1,5 @@
+@file:Suppress("MemberVisibilityCanBePrivate")
+
 package io.dyte.socketio
 
 import kotlinx.serialization.decodeFromString
@@ -69,7 +71,6 @@ object ClientParser {
       throw UnsupportedOperationException("Unknown Socket.IO packet type $type")
     }
 
-    var packetNamespace = ""
     var packetId: Int? = null
     var packetPayload: JsonElement? = null
     var packetBinaryAttachments: Int? = null
@@ -87,17 +88,18 @@ object ClientParser {
     }
 
     // look up namespace (if any)
-    if (i < endLen - 1 && '/' == str[i + 1]) {
-      val start = i + 1
-      while (++i > 0) {
-        if (i == str.length) break
-        val c = str[i]
-        if (',' == c) break
+    val packetNamespace =
+      if (i < endLen - 1 && '/' == str[i + 1]) {
+        val start = i + 1
+        while (++i > 0) {
+          if (i == str.length) break
+          val c = str[i]
+          if (',' == c) break
+        }
+        str.substring(start, i)
+      } else {
+        "/"
       }
-      packetNamespace = str.substring(start, i)
-    } else {
-      packetNamespace = "/"
-    }
 
     // look up id
     val next: String? = if (i < endLen - 1) str[i + 1].toString() else null
