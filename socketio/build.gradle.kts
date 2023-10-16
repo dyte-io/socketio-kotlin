@@ -24,7 +24,7 @@ mavenPublishing {
 }
 
 kotlin {
-  android { publishLibraryVariants("debug", "release") }
+  androidTarget { publishLibraryVariants("debug", "release") }
   iosX64()
   iosArm64()
   iosSimulatorArm64()
