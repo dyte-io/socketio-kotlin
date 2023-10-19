@@ -1,5 +1,4 @@
-// Workaround for https://github.com/gradle/gradle/issues/22797, to be fixed in Gradle 8.1
-@file:Suppress("DSL_SCOPE_VIOLATION", "UnstableApiUsage")
+@file:Suppress("UnstableApiUsage")
 
 import com.vanniktech.maven.publish.JavadocJar
 import com.vanniktech.maven.publish.KotlinMultiplatform
@@ -14,6 +13,8 @@ plugins {
   alias(libs.plugins.gradle.maven.publish)
 }
 
+kotlin.jvmToolchain(11)
+
 mavenPublishing {
   val isCI = providers.environmentVariable("CI").isPresent
   publishToMavenCentral(host = SonatypeHost.S01, automaticRelease = true)
@@ -25,7 +26,7 @@ mavenPublishing {
 }
 
 kotlin {
-  android { publishLibraryVariants("debug", "release") }
+  androidTarget { publishLibraryVariants("debug", "release") }
   iosX64()
   iosArm64()
   iosSimulatorArm64()

@@ -1,40 +1,34 @@
 package io.dyte.socketio
 
-import Manager
-import ManagerOptions
-import SocketClient
-import io.ktor.http.*
+import io.ktor.http.URLBuilder
+import io.ktor.http.encodedPath
 
-class IO {
-  companion object {
-    val cache: MutableMap<String, Any> = mutableMapOf()
+object IO {
+  private val cache: MutableMap<String, Manager> = mutableMapOf()
 
-    fun socket(uri: String, opts: IOOptions): SocketClient {
-      return _lookup(uri, opts)
-    }
+  fun socket(uri: String, opts: IOOptions): SocketClient {
+    return lookup(uri, opts)
+  }
 
-    fun _lookup(uri: String, opts: IOOptions): SocketClient {
+  private fun lookup(uri: String, opts: IOOptions): SocketClient {
 
-      var parsed = URLBuilder(uri)
-      var id = "${parsed.protocol}://${parsed.host}:${parsed.port}"
-      var path = parsed.encodedPath
-      var sameNamespace =
-        cache.containsKey(id) && (cache.get("id") as Manager).nsps.containsKey(path)
-      var newConnection = opts.forceNew == true || opts.multiplex == false || sameNamespace
+    val parsed = URLBuilder(uri)
+    val id = "${parsed.protocol}://${parsed.host}:${parsed.port}"
+    val path = parsed.encodedPath
+    val sameNamespace = cache[id]?.nsps?.containsKey(path) ?: false
+    val newConnection = opts.forceNew == true || opts.multiplex == false || sameNamespace
 
-      var io: Manager
-
+    val io =
       if (newConnection) {
         // Logger.fine('ignoring socket cache for $uri');
-        io = Manager(uri, opts)
+        Manager(uri, opts)
       } else {
-        io = cache.getOrElse(id) { Manager(uri, opts) } as Manager
+        cache.getOrElse(id) { Manager(uri, opts) }
       }
-      if (!parsed.parameters.isEmpty()) {
-        opts.query = parsed.parameters.build()
-      }
-      return io.socket(if (parsed.pathSegments.isEmpty()) "/" else parsed.encodedPath)
+    if (!parsed.parameters.isEmpty()) {
+      opts.query = parsed.parameters.build()
     }
+    return io.socket(if (parsed.pathSegments.isEmpty()) "/" else parsed.encodedPath)
   }
 }
 
