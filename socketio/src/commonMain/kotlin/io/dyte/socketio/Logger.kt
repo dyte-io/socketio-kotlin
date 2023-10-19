@@ -38,7 +38,7 @@ object StdoutLogger : ExternalLogger {
 }
 
 object Logger {
-  val instance = "SocketIO"
+  private const val instance = "SocketIO"
   private var level = LogLevel.WARN
   private var externalLogger: ExternalLogger = StdoutLogger
 

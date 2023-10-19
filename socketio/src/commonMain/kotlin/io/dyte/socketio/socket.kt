@@ -414,7 +414,7 @@ class SocketClient(io: Manager, nsp: String, opts: ManagerOptions) : EventEmitte
       subs = null
     }
 
-    io.destroy(this)
+    io.destroy()
   }
 
   /**

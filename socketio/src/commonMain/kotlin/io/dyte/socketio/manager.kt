@@ -8,40 +8,24 @@ import kotlin.math.min
 import kotlin.math.pow
 import kotlin.random.Random
 
-/**
- * Manager` constructor.
- *
- * @param {String} io.dyte.socketio.engine instance or io.dyte.socketio.engine uri/opts
- * @param {ManagerOptions} options
- */
-class Manager : EventEmitter {
+// TODO:
+//  fix Backoff
+//    backoff = Backoff(
+//        reconnectionDelay,
+//        reconnectionDelayMax,
+//        factor = randomizationFactor);
+class Manager(private var uri: String, private var options: ManagerOptions) : EventEmitter() {
   // Namespaces
   val nsps = mutableMapOf<String, SocketClient>()
   val subs = mutableListOf<Destroyable>()
-  lateinit var options: ManagerOptions
 
-  /**
-   * Sets the `reconnection` config.
-   *
-   * @param {Boolean} true/false if it should automatically reconnect
-   * @return {Manager} self or value
-   */
+  /** Sets the `reconnection` config. */
   var reconnection = true
 
-  /**
-   * Sets the reconnection attempts config.
-   *
-   * @param {Number} max reconnection attempts before giving up
-   * @return {Manager} self or value
-   */
+  /** Sets the reconnection attempts config. */
   var reconnectionAttempts = Int.MAX_VALUE
 
-  /**
-   * Sets the delay between reconnections.
-   *
-   * @param {Number} delay
-   * @return {Manager} self or value
-   */
+  /** Sets the delay between reconnections. */
   var reconnectionDelay = 1000L
   var randomizationFactor: Double = 0.5
 
@@ -56,7 +40,6 @@ class Manager : EventEmitter {
   var backoff: Backoff =
     Backoff(reconnectionDelay, reconnectionDelayMax, factor = randomizationFactor)
   var readyState: String = "closed"
-  lateinit var uri: String
   var reconnecting = false
 
   lateinit var engine: EngineSocket
@@ -64,43 +47,34 @@ class Manager : EventEmitter {
   var autoConnect: Boolean = true
   var skipReconnect: Boolean = false
 
-  constructor(uri: String, options: ManagerOptions) {
+  init {
     options.path = if (options.path != null) options.path else "/socket.io/"
-    this.options = options
     reconnection = options.reconnection
     reconnectionAttempts = options.reconnectionAttempts
     reconnectionDelay = options.reconnectionDelay
     reconnectionDelayMax = options.reconnectionDelayMax
     randomizationFactor = options.randomizationFactor
-    // TODO:
-    //  fix Backoff
-    //    backoff = Backoff(
-    //        reconnectionDelay,
-    //        reconnectionDelayMax,
-    //        factor = randomizationFactor);
     backoff = Backoff()
     timeout = options.timeout
-    this.uri = uri
     autoConnect = options.autoConnect != false
     if (autoConnect) open(opt = options)
+  }
+
+  companion object {
+    const val EVENT_RECONNECT_ATTEMPT = "reconnect_attempt"
+    const val EVENT_RECONNECT = "reconnect"
+    const val EVENT_RECONNECT_FAILED = "reconnect_failed"
+    const val EVENT_ERROR = "error"
   }
 
   /**
    * Sets the maximum delay between reconnections.
    *
-   * @param {Number} delay
-   * @return {Manager} self or value
+   * @param delay Delay in milliseconds
    */
-  companion object {
-    val EVENT_RECONNECT_ATTEMPT = "reconnect_attempt"
-    val EVENT_RECONNECT = "reconnect"
-    val EVENT_RECONNECT_FAILED = "reconnect_failed"
-    val EVENT_ERROR = "error"
-  }
-
-  fun setReconnectionDelayMaxInternal(v: Long) {
-    reconnectionDelayMax = v
-    backoff.max = v
+  fun setReconnectionDelayMaxInternal(delay: Long) {
+    reconnectionDelayMax = delay
+    backoff.max(delay)
   }
 
   /**
@@ -108,7 +82,7 @@ class Manager : EventEmitter {
    */
   fun maybeReconnectOnOpen() {
     // Only try to reconnect if it"s the first time we"re connecting
-    if (!reconnecting && reconnection == true && backoff.attempts == 0) {
+    if (!reconnecting && reconnection && backoff.attempts == 0) {
       // keeps reconnection from firing twice for the same reconnection loop
       reconnect()
     }
@@ -117,8 +91,7 @@ class Manager : EventEmitter {
   /**
    * Sets the current transport `socket`.
    *
-   * @param {Function} optional, callback
-   * @return {Manager} self
+   * @param callback optional method invoked with the error if any
    */
   fun open(callback: ((data: Any?) -> Unit)? = null, opt: EngineSocketOptions) {
     connect(callback = callback, opt = opt)
@@ -130,25 +103,24 @@ class Manager : EventEmitter {
 
     Logger.debug("Manager opening $uri")
     engine = EngineSocket(uri, opt)
-    var socket = engine
     readyState = "opening"
     skipReconnect = false
 
     // emit `open`
-    var openSubDestroy =
+    val openSubDestroy =
       Util.on(
-        socket,
+        engine,
         "open",
         fun(_) {
-          onopen()
+          onOpen()
           if (callback != null) callback(null)
         }
       )
 
     // emit `connect_error`
-    var errorSub =
+    val errorSub =
       Util.on(
-        socket,
+        engine,
         "error",
         fun(data) {
           Logger.error("Manager connect_error")
@@ -171,8 +143,8 @@ class Manager : EventEmitter {
         fun() {
           Logger.debug("connect attempt timed out after $timeout")
           openSubDestroy.destroy()
-          socket.emit(EVENT_ERROR, "timeout")
-          socket.close()
+          engine.emit(EVENT_ERROR, "timeout")
+          engine.close()
         }
       if (timeout == 0L) {
         // prevents a race condition with the "open" event
@@ -180,7 +152,7 @@ class Manager : EventEmitter {
         return this
       }
       // set timer
-      var timer = Timer(timeout, timeoutFx)
+      val timer = Timer(timeout, timeoutFx)
       timer.schedule()
 
       subs.add(
@@ -199,7 +171,7 @@ class Manager : EventEmitter {
   }
 
   /** Called upon transport open. */
-  fun onopen() {
+  fun onOpen() {
     Logger.debug("Manager onopen")
 
     // clear old subs
@@ -210,21 +182,20 @@ class Manager : EventEmitter {
     emit("open")
 
     // add subs
-    var socket = engine
-    subs.add(Util.on(socket, "data", ::ondata))
-    subs.add(Util.on(socket, "ping", ::onping))
-    // subs.add(Util.on(socket, "pong", onpong));
-    subs.add(Util.on(socket, "error", ::onerror))
-    subs.add(Util.on(socket, "close", ::onclose))
+    subs.add(Util.on(engine, "data", ::onData))
+    subs.add(Util.on(engine, "ping", ::onPing))
+    // subs.add(Util.on(engine, "pong", onPong));
+    subs.add(Util.on(engine, "error", ::onError))
+    subs.add(Util.on(engine, "close", ::onClose))
   }
 
   /** Called upon a ping. */
-  fun onping(data: Any? = null) {
-    emit("ping")
+  fun onPing(data: Any? = null) {
+    emit("ping:: $data")
   }
 
   /** Called with data. */
-  fun ondata(data: Any?) {
+  fun onData(data: Any?) {
     Logger.debug("Manager onData")
     if (data != null) {
       val packet = ClientParser.decode(data as String)
@@ -233,7 +204,7 @@ class Manager : EventEmitter {
   }
 
   /** Called upon socket error. */
-  fun onerror(err: Any?) {
+  fun onError(err: Any?) {
     Logger.error("Manager error $err")
     emit(EVENT_ERROR, err)
   }
@@ -241,7 +212,7 @@ class Manager : EventEmitter {
   /**
    * Creates a socket for the given `nsp`.
    *
-   * @return {SocketClient}
+   * @return The created [SocketClient] instance.
    */
   fun socket(nsp: String): SocketClient {
     var socket = nsps[nsp]
@@ -254,20 +225,15 @@ class Manager : EventEmitter {
     return socket
   }
 
-  /**
-   * Called upon a socket close.
-   *
-   * @param SocketClient socket
-   */
-  fun destroy(socket: SocketClient) {
-    var _nsps = nsps.keys
+  /** Called upon a socket close. */
+  fun destroy() {
+    val nspIds = nsps.keys
 
-    for (nsp in _nsps) {
+    for (nsp in nspIds) {
       val socket = nsps[nsp]
 
       if (socket?.getActive() == true) {
         Logger.warn("socket $nsp is still active, skipping close")
-        // TODO: check if retun function or loop iteration
         return
       }
     }
@@ -278,34 +244,25 @@ class Manager : EventEmitter {
   /**
    * Writes a packet.
    *
-   * @param {Object} packet
+   * @param packet the [ClientPacket] that needs to be written to the [engine].
    */
   fun packet(packet: ClientPacket) {
-    Logger.debug("writing packet ${packet}")
-
-    var encodedPacket = ClientParser.encode(packet)
-    engine.write(encodedPacket)
+    Logger.debug("writing packet $packet")
+    engine.write(ClientParser.encode(packet))
   }
 
   /** Clean up transport subscriptions and packet buffer. */
   fun cleanup() {
     Logger.debug("Manager cleanup")
 
-    var subsLength = subs.size
-    for (i in 1 until subsLength) {
-      var sub = subs.removeAt(0)
+    for (i in 1 until subs.size) {
+      val sub = subs.removeAt(0)
       sub.destroy()
     }
-
-    //    decoder.destroy();
   }
 
   /** Close the current socket. */
   fun close() {
-    disconnect()
-  }
-
-  fun disconnect() {
     Logger.info("disconnect")
     skipReconnect = true
     reconnecting = false
@@ -320,8 +277,8 @@ class Manager : EventEmitter {
   }
 
   /** Called upon io.dyte.socketio.engine close. */
-  fun onclose(error: Any?) {
-    Logger.debug("onclose")
+  fun onClose(error: Any?) {
+    Logger.debug("onclose:: $error")
 
     cleanup()
     backoff.reset()
@@ -344,11 +301,11 @@ class Manager : EventEmitter {
       emit(EVENT_RECONNECT_FAILED)
       reconnecting = false
     } else {
-      var delay = backoff.duration
+      val delay = backoff.duration
       Logger.info("will wait %dms before reconnect attempt $delay")
 
       reconnecting = true
-      var timer =
+      val timer =
         Timer(
           delay,
           fun() {
@@ -372,7 +329,7 @@ class Manager : EventEmitter {
                   emit("reconnect_error", "")
                 } else {
                   Logger.info("reconnect success")
-                  onreconnect()
+                  onReconnect()
                 }
               },
               this.options
@@ -393,11 +350,10 @@ class Manager : EventEmitter {
   }
 
   /** Called upon successful reconnect. */
-  fun onreconnect() {
-    var attempt = backoff.attempts
+  fun onReconnect() {
     reconnecting = false
     backoff.reset()
-    emit(EVENT_RECONNECT, attempt)
+    emit(EVENT_RECONNECT, backoff.attempts)
   }
 }
 
@@ -407,34 +363,35 @@ class Manager : EventEmitter {
  * - `max` max timeout [10000]
  * - `jitter` [0]
  * - `factor` [2]
- *
- * @param {Object} opts
  */
-class Backoff(min: Long = 100, max: Long = 10000, _jitter: Double = 0.0, factor: Double = 2.0) {
-  var ms = min
-  var max = max
-  val factor = factor
-  var _jitter = if (_jitter > 0 && _jitter <= 1) _jitter else 0.0
+class Backoff(
+  private val min: Long = 100,
+  private var max: Long = 10000,
+  private val jitter: Double = 0.0,
+  private val factor: Double = 2.0,
+) {
   var attempts = 0
 
-  /**
-   * Return the backoff duration.
-   *
-   * @return {Number}
-   */
+  init {
+    require(jitter > 0.0 && jitter <= 1.0) {
+      throw IllegalArgumentException("jitter should be between 0.0 and 1.0")
+    }
+  }
+
+  /** Return the backoff duration. */
   val duration: Long
     get() {
-      var _ms = min(ms * factor.pow(attempts++), 1e100)
-      if (_jitter > 0.0) {
-        var rand = Random(0).nextDouble()
-        var deviation = floor(rand * _jitter * ms)
-        _ms = if (((floor(rand * 10) as Int).and(1)) == 0) (ms - deviation) else (ms + deviation)
+      var ms = min(min * factor.pow(attempts++), 1e100)
+      if (jitter > 0.0) {
+        val rand = Random(0).nextDouble()
+        val deviation = floor(rand * jitter * min)
+        ms = if (((floor(rand * 10).toInt()).and(1)) == 0) (min - deviation) else (min + deviation)
       }
       // #39: avoid an overflow with negative value
-      if (max < +ms) {
-        _ms = max.toDouble()
+      if (max < +min) {
+        ms = max.toDouble()
       }
-      return if (ms <= 0) max else _ms.toLong()
+      return if (min <= 0) max else ms.toLong()
     }
 
   /** Reset the number of attempts. */
@@ -442,23 +399,8 @@ class Backoff(min: Long = 100, max: Long = 10000, _jitter: Double = 0.0, factor:
     attempts = 0
   }
 
-  /** Set the minimum duration */
-  fun min(m: Long) {
-    ms = m
-  }
-
-  /** Set the maximum duration */
-  fun max(m: Long) {
-    max = m
-  }
-
-  /** Set the jitter */
-  fun jitter(jitter: Double) {
-    if (jitter > 0 && jitter <= 1) {
-      _jitter = jitter
-    } else {
-      throw IllegalArgumentException("jitter should be between 0.0 and 1.0")
-    }
+  fun max(max: Long) {
+    this.max = max
   }
 }
 
