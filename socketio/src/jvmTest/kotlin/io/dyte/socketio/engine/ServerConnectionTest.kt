@@ -18,20 +18,8 @@ class ServerConnectionTest : Connection("engine") {
   fun openAndClose() {
     val events: BlockingQueue<String> = LinkedBlockingQueue()
     var socket = EngineSocket(_opts = createOptions())
-    socket.on(
-      EngineSocket.EVENT_OPEN,
-      handler =
-        fun(_) {
-          events.offer("onopen")
-        }
-    )
-    socket.on(
-      EngineSocket.EVENT_CLOSE,
-      handler =
-        fun(_) {
-          events.offer("onclose")
-        }
-    )
+    socket.on(EngineSocket.EVENT_OPEN, handler = { _ -> events.offer("onopen") })
+    socket.on(EngineSocket.EVENT_CLOSE, handler = { _ -> events.offer("onclose") })
     socket.open()
     assertEquals("onopen", events.take())
     socket.close()
@@ -43,20 +31,8 @@ class ServerConnectionTest : Connection("engine") {
   fun messages() {
     val events: BlockingQueue<String> = LinkedBlockingQueue()
     var socket = EngineSocket(_opts = createOptions())
-    socket.on(
-      EngineSocket.EVENT_OPEN,
-      handler =
-        fun(_) {
-          socket.send("hello")
-        }
-    )
-    socket.on(
-      EngineSocket.EVENT_MESSAGE,
-      handler =
-        fun(data: Any?) {
-          events.offer(data as String)
-        }
-    )
+    socket.on(EngineSocket.EVENT_OPEN, handler = { _ -> socket.send("hello") })
+    socket.on(EngineSocket.EVENT_MESSAGE, handler = { data: Any? -> events.offer(data as String) })
     socket.open()
     assertEquals("hi", events.take())
     assertEquals("hello", events.take())
@@ -68,13 +44,7 @@ class ServerConnectionTest : Connection("engine") {
   fun handshake() {
     val values: BlockingQueue<Any> = LinkedBlockingQueue()
     var socket = EngineSocket(_opts = createOptions())
-    socket.on(
-      EngineSocket.EVENT_HANDSHAKE,
-      handler =
-        fun(data: Any?) {
-          values.offer(data)
-        }
-    )
+    socket.on(EngineSocket.EVENT_HANDSHAKE, handler = { data: Any? -> values.offer(data) })
     socket.open()
     val data = values.take() as EnginePacket.Open
     assert(data.sid != null)
@@ -89,20 +59,8 @@ class ServerConnectionTest : Connection("engine") {
   fun upgrade() {
     val events: BlockingQueue<Any> = LinkedBlockingQueue()
     var socket = EngineSocket(_opts = createOptions())
-    socket.on(
-      EngineSocket.EVENT_UPGRADING,
-      handler =
-        fun(data: Any?) {
-          events.offer(data)
-        }
-    )
-    socket.on(
-      EngineSocket.EVENT_UPGRADE,
-      handler =
-        fun(data: Any?) {
-          events.offer(data)
-        }
-    )
+    socket.on(EngineSocket.EVENT_UPGRADING, handler = { data: Any? -> events.offer(data) })
+    socket.on(EngineSocket.EVENT_UPGRADE, handler = { data: Any? -> events.offer(data) })
     socket.open()
     val args1 = events.take()
     assert(args1 is Transport)
@@ -126,12 +84,12 @@ class ServerConnectionTest : Connection("engine") {
   //    socket.on(
   //      EngineSocket.EVENT_TRANSPORT,
   //      handler =
-  //        fun(data: Any?) {
+  //        { data: Any? ->
   //          val transport = data as Transport
   //          transport.on(
   //            Transport.EVENT_RESPONSE_HEADERS,
   //            handler =
-  //              fun(data: Any?) {
+  //              { data: Any? ->
   //                val headers = data as Map<String, List<String>>
   //                val values = headers["X-EngineIO"]!!
   //                messages.offer(values[0])
@@ -153,7 +111,7 @@ class ServerConnectionTest : Connection("engine") {
     var socket = EngineSocket(_opts = createOptions())
     socket.on(
       EngineSocket.EVENT_UPGRADE,
-      fun(data: Any?) {
+      { data: Any? ->
         val transport = data as Transport
         socket.close()
         if ("websocket".equals(transport.name)) {
@@ -180,7 +138,7 @@ class ServerConnectionTest : Connection("engine") {
     var socket = EngineSocket(_opts = createOptions())
     socket.on(
       EngineSocket.EVENT_UPGRADE,
-      fun(data: Any?) {
+      { data: Any? ->
         val transport = data as Transport
         socket.close()
         if ("websocket".equals(transport.name)) {

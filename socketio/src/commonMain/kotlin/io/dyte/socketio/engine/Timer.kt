@@ -7,11 +7,9 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-class Timer(timeMillis: Long, Fx: () -> Unit) :
+class Timer(private var timeMillis: Long, private var tick: () -> Unit) :
   CoroutineScope { // implement CoroutineScope to create local scope
   private var job: Job = Job()
-  private var timeMillis = timeMillis
-  private var Fx = Fx
   override val coroutineContext: CoroutineContext
     get() = Dispatchers.Default + job
 
@@ -23,6 +21,6 @@ class Timer(timeMillis: Long, Fx: () -> Unit) :
 
   fun schedule() = launch { // launching the coroutine
     delay(timeMillis)
-    Fx()
+    tick()
   }
 }

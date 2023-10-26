@@ -21,11 +21,11 @@ class BinaryPollingTest : Connection("engine") {
     val socket = EngineSocket(_opts = opts)
     socket.on(
       EngineSocket.EVENT_OPEN,
-      fun(_) {
+      { _ ->
         socket.send(binaryData)
         socket.on(
           EngineSocket.EVENT_MESSAGE,
-          fun(data: Any?) {
+          { data: Any? ->
             if ("hi" == data) return
             values.offer(data)
           }
@@ -52,12 +52,12 @@ class BinaryPollingTest : Connection("engine") {
     val socket = EngineSocket(_opts = opts)
     socket.on(
       EngineSocket.EVENT_OPEN,
-      fun(_) {
+      { _ ->
         socket.send(binaryData)
         socket.send("cash money €€€")
         socket.on(
           EngineSocket.EVENT_MESSAGE,
-          fun(data: Any?) {
+          { data: Any? ->
             if ("hi" == data) return
             values.offer(data)
             msg[0]++

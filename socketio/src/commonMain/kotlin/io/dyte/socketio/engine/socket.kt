@@ -161,12 +161,7 @@ class EngineSocket : EventEmitter {
       transportName = "websocket"
     } else if (transports.isEmpty()) {
       // Emit error on next tick so it can be listened to
-      Timer(
-        1,
-        fun() {
-          emit("error", "No transports available")
-        }
-      )
+      Timer(1) { emit("error", "No transports available") }
       return
     } else {
       transportName = transports[0]
@@ -200,30 +195,10 @@ class EngineSocket : EventEmitter {
     this.transport = transport
 
     // set up transport listeners
-    transport.on(
-      "drain",
-      fun(data: Any?) {
-        onDrain()
-      }
-    )
-    transport.on(
-      "packet",
-      fun(packet) {
-        onPacket(packet as EnginePacket)
-      }
-    )
-    transport.on(
-      "error",
-      fun(e: Any?) {
-        onError(e)
-      }
-    )
-    transport.on(
-      "close",
-      fun(data: Any?) {
-        onClose("transport close", "")
-      }
-    )
+    transport.on("drain") { data: Any? -> onDrain() }
+    transport.on("packet") { packet -> onPacket(packet as EnginePacket) }
+    transport.on("error") { e: Any? -> onError(e) }
+    transport.on("close") { data: Any? -> onClose("transport close", "") }
   }
 
   /**
@@ -232,7 +207,7 @@ class EngineSocket : EventEmitter {
    * @param {String} transport name
    */
   fun probe(name: String) {
-    Logger.debug("probing transport ${name}")
+    Logger.debug("probing transport $name")
     val probeTransportOptions = TransportOptions()
     probeTransportOptions.probe = true
     var transport: Transport? = createTransport(name, probeTransportOptions)
@@ -240,52 +215,47 @@ class EngineSocket : EventEmitter {
     val cleanup = arrayListOf<() -> Unit>()
 
     val onTransportOpen =
-      fun(data: Any?) {
+      fun(_: Any?) {
         if (failed) return
 
         Logger.info("probe transport $name opened")
         transport?.send(listOf(EnginePacket.Ping("probe")))
-        transport?.once(
-          "packet",
-          fun(_msg) {
-            if (failed) return
-            val msg = _msg as EnginePacket
-            if (msg is EnginePacket.Pong && msg.payload == "probe") {
-              Logger.debug("probe transport $name pong")
-              upgrading = true
-              emit(EVENT_UPGRADING, transport)
-              if (transport == null) return
-              priorWebsocketSuccess = "websocket" == transport?.name
+        transport?.once("packet") { msg ->
+          if (failed) return@once
+          val msg = msg as EnginePacket
+          if (msg is EnginePacket.Pong && msg.payload == "probe") {
+            Logger.debug("probe transport $name pong")
+            upgrading = true
+            emit(EVENT_UPGRADING, transport)
+            if (transport == null) return@once
+            priorWebsocketSuccess = "websocket" == transport?.name
 
-              Logger.debug("pausing current transport ${transport?.name}")
-              if (this.transport is PollingTransport) {
-                (this.transport as PollingTransport).pause(
-                  fun() {
-                    if (failed) return
-                    if ("closed" == readyState) return
-                    Logger.info("changing transport and sending upgrade packet")
+            Logger.debug("pausing current transport ${transport?.name}")
+            if (this.transport is PollingTransport) {
+              (this.transport as PollingTransport).pause {
+                if (failed) return@pause
+                if ("closed" == readyState) return@pause
+                Logger.info("changing transport and sending upgrade packet")
 
-                    if (cleanup.size > 0) {
-                      cleanup[0]()
-                    }
-                    setTransportInternal(transport!!)
-                    transport?.send(listOf(EnginePacket.Upgrade))
-                    emit(EVENT_UPGRADE, transport)
-                    transport = null
-                    upgrading = false
-                    flush()
-                  }
-                )
+                if (cleanup.size > 0) {
+                  cleanup[0]()
+                }
+                setTransportInternal(transport!!)
+                transport?.send(listOf(EnginePacket.Upgrade))
+                emit(EVENT_UPGRADE, transport)
+                transport = null
+                upgrading = false
+                flush()
               }
-            } else {
-              Logger.warn("probe transport ${name} failed ${msg}")
-              emit(
-                EVENT_UPGRADE_ERROR,
-                mutableMapOf("error" to "probe error", "transport" to transport?.name)
-              )
             }
+          } else {
+            Logger.warn("probe transport $name failed $msg")
+            emit(
+              EVENT_UPGRADE_ERROR,
+              mutableMapOf("error" to "probe error", "transport" to transport?.name)
+            )
           }
-        )
+        }
       }
 
     val freezeTransport =
@@ -303,58 +273,47 @@ class EngineSocket : EventEmitter {
       }
 
     // Handle any error that happens while probing
-    val onerror =
-      fun(err: Any?) {
-        val oldTransport = transport
-        freezeTransport()
+    val onError = { err: Any? ->
+      val oldTransport = transport
+      freezeTransport()
 
-        Logger.warn("probe transport ${name} failed because of error: $err")
+      Logger.warn("probe transport ${name} failed because of error: $err")
 
-        emit(
-          EVENT_UPGRADE_ERROR,
-          mutableMapOf("error" to "probe error: $err", "transport" to oldTransport?.name)
-        )
-      }
+      emit(
+        EVENT_UPGRADE_ERROR,
+        mutableMapOf("error" to "probe error: $err", "transport" to oldTransport?.name)
+      )
+    }
 
-    val onTransportClose =
-      fun(data: Any?) {
-        onerror("transport closed")
-      }
+    val onTransportClose = { data: Any? -> onError("transport closed") }
 
     // When the socket is closed while we"re probing
-    val onclose =
-      fun(data: Any?) {
-        onerror("socket closed")
-      }
+    val onClose = { data: Any? -> onError("socket closed") }
 
     // When the socket is upgraded while we"re probing
-    val onupgrade =
-      fun(_to: Any?) {
-        val to = _to as Transport?
-        if (transport != null && to?.name != transport?.name) {
-          Logger.info("${to?.name} works - aborting ${transport?.name}")
-          freezeTransport()
-        }
+    val onUpgrade = { _to: Any? ->
+      val to = _to as Transport?
+      if (transport != null && to?.name != transport?.name) {
+        Logger.info("${to?.name} works - aborting ${transport?.name}")
+        freezeTransport()
       }
+    }
 
     // Remove all listeners on the transport and on self
-    cleanup.add(
-      0,
-      fun() {
-        transport?.off("open", onTransportOpen)
-        transport?.off("error", onerror)
-        transport?.off("close", onTransportClose)
-        off("close", onclose)
-        off("upgrading", onupgrade)
-      }
-    )
+    cleanup.add(0) {
+      transport?.off("open", onTransportOpen)
+      transport?.off("error", onError)
+      transport?.off("close", onTransportClose)
+      off("close", onClose)
+      off("upgrading", onUpgrade)
+    }
 
     transport?.once("open", onTransportOpen)
-    transport?.once("error", onerror)
+    transport?.once("error", onError)
     transport?.once("close", onTransportClose)
 
-    once("close", onclose)
-    once("upgrading", onupgrade)
+    once("close", onClose)
+    once("upgrading", onUpgrade)
 
     transport?.open()
   }
@@ -422,13 +381,7 @@ class EngineSocket : EventEmitter {
   /** Sets and resets ping timeout timer based on server pings. */
   fun resetPingTimeout() {
     pingTimeoutTimer?.cancel()
-    pingTimeoutTimer =
-      Timer(
-        pingInterval + pingTimeout,
-        fun() {
-          onClose("ping timeout", "")
-        }
-      )
+    pingTimeoutTimer = Timer(pingInterval + pingTimeout) { onClose("ping timeout", "") }
     pingTimeoutTimer?.schedule()
   }
 
@@ -527,49 +480,41 @@ class EngineSocket : EventEmitter {
 
   /** Closes the connection. */
   fun close(): EngineSocket {
-    val close =
-      fun() {
-        onClose("forced close", "")
-        Logger.info("socket closing - telling transport to close")
-        transport?.close()
-      }
+    val close = {
+      onClose("forced close", "")
+      Logger.info("socket closing - telling transport to close")
+      transport?.close()
+    }
 
     val cleanupAndClose = arrayListOf<(Any?) -> Unit>()
 
-    cleanupAndClose.add(
-      0,
-      fun(data: Any?) {
-        if (cleanupAndClose.size > 0) {
-          off("upgrade", cleanupAndClose[0])
-          off("upgradeError", cleanupAndClose[0])
-        }
-        close()
+    cleanupAndClose.add(0) { data: Any? ->
+      if (cleanupAndClose.size > 0) {
+        off("upgrade", cleanupAndClose[0])
+        off("upgradeError", cleanupAndClose[0])
       }
-    )
+      close()
+    }
 
-    val waitForUpgrade =
-      fun() {
-        if (cleanupAndClose.size > 0) {
-          // wait for upgrade to finish since we can"t send packets while pausing a transport
-          once("upgrade", cleanupAndClose[0])
-          once("upgradeError", cleanupAndClose[0])
-        }
+    val waitForUpgrade = {
+      if (cleanupAndClose.size > 0) {
+        // wait for upgrade to finish since we can"t send packets while pausing a transport
+        once("upgrade", cleanupAndClose[0])
+        once("upgradeError", cleanupAndClose[0])
       }
+    }
 
     if ("opening" == readyState || "open" == readyState) {
       readyState = "closing"
 
       if (writeBuffer.isNotEmpty()) {
-        once(
-          "drain",
-          fun(data: Any?) {
-            if (upgrading == true) {
-              waitForUpgrade()
-            } else {
-              close()
-            }
+        once("drain") { data: Any? ->
+          if (upgrading == true) {
+            waitForUpgrade()
+          } else {
+            close()
           }
-        )
+        }
       } else if (upgrading == true) {
         waitForUpgrade()
       } else {

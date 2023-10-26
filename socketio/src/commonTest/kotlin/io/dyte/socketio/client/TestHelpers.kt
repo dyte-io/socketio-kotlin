@@ -17,7 +17,7 @@ object TestHelpers {
     assertFailsWith<Exception> { ClientParser.decode(errorMessage) }
   }
 
-  fun assertPacket(expected: ClientPacket, actual: ClientPacket) {
+  private fun assertPacket(expected: ClientPacket, actual: ClientPacket) {
     assertEquals(expected.toCharType(), actual.toCharType())
     assertEquals(expected.namespace, actual.namespace)
     if (expected is ClientPacket.BinaryEvent && actual is ClientPacket.BinaryEvent) {

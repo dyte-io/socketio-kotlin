@@ -93,14 +93,14 @@ class ConnectionTest : Connection("client") {
       socket.emit("callAck")
       socket.onEvent(
         "ack",
-        fun(data: Any?, ack: ACKFn) {
+        { data: Any?, ack: ACKFn ->
           val data = buildJsonObject { put("test", JsonPrimitive(true)) }
           ack?.invoke(listOf(JsonPrimitive(5), data))
         }
       )
       socket.onEvent(
         "ackBack",
-        fun(args) {
+        { args ->
           try {
             val data = args[1].asJsonObject()
             if (args[0].asInt() == 5 && data?.get("test")?.asBoolean() == true) {
@@ -127,7 +127,7 @@ class ConnectionTest : Connection("client") {
         socket.emit(
           "getAckDate",
           Json.decodeFromString<JsonObject>("{\"test\": true}"),
-          fun(_args: Any?) {
+          { _args: Any? ->
             val args = _args as ArrayList<JsonElement>
             values.offer(args[0].asString())
           }
@@ -182,7 +182,7 @@ class ConnectionTest : Connection("client") {
     val socket = client()
     socket.io.on(
       Manager.EVENT_RECONNECT,
-      fun(_) {
+      { _ ->
         socket.close()
         values.offer("done")
       }
@@ -208,7 +208,7 @@ class ConnectionTest : Connection("client") {
 
     socket.io.on(
       Manager.EVENT_RECONNECT,
-      fun(_) {
+      { _ ->
         println("1 Reconnected")
         values.offer("reconnected")
       }
@@ -239,18 +239,13 @@ class ConnectionTest : Connection("client") {
   fun reconnectManually() {
     val values: BlockingQueue<Any> = LinkedBlockingQueue()
     val socket = client()
-    socket.once(
-      SocketClient.EVENT_CONNECT,
-      fun(_) {
-        socket.disconnect()
-      }
-    )
+    socket.once(SocketClient.EVENT_CONNECT, { _ -> socket.disconnect() })
     socket.once(
       SocketClient.EVENT_DISCONNECT,
-      fun(_) {
+      { _ ->
         socket.once(
           SocketClient.EVENT_CONNECT,
-          fun(_) {
+          { _ ->
             socket.disconnect()
             values.offer("done")
           }
@@ -267,18 +262,13 @@ class ConnectionTest : Connection("client") {
   fun reconnectAutomaticallyAfterReconnectingManually() {
     val values: BlockingQueue<Any> = LinkedBlockingQueue()
     val socket = client()
-    socket.once(
-      SocketClient.EVENT_CONNECT,
-      fun(_) {
-        socket.disconnect()
-      }
-    )
+    socket.once(SocketClient.EVENT_CONNECT, { _ -> socket.disconnect() })
     socket.once(
       SocketClient.EVENT_DISCONNECT,
-      fun(_) {
+      { _ ->
         socket.io.on(
           Manager.EVENT_RECONNECT,
-          fun(_) {
+          { _ ->
             socket.disconnect()
             values.offer("done")
           }
@@ -312,20 +302,10 @@ class ConnectionTest : Connection("client") {
     val socket = manager.socket("/timeout")
     manager.once(
       Manager.EVENT_RECONNECT_FAILED,
-      fun(_) {
+      { _ ->
         val reconnects = intArrayOf(0)
-        manager.on(
-          Manager.EVENT_RECONNECT_ATTEMPT,
-          fun(_) {
-            reconnects[0]++
-          }
-        )
-        manager.on(
-          Manager.EVENT_RECONNECT_FAILED,
-          fun(_) {
-            values.offer(reconnects[0])
-          }
-        )
+        manager.on(Manager.EVENT_RECONNECT_ATTEMPT, { _ -> reconnects[0]++ })
+        manager.on(Manager.EVENT_RECONNECT_FAILED, { _ -> values.offer(reconnects[0]) })
         socket.connect()
       }
     )
@@ -352,15 +332,10 @@ class ConnectionTest : Connection("client") {
     val increasingDelay = booleanArrayOf(true)
     val startTime = longArrayOf(0)
     val prevDelay = longArrayOf(0)
-    manager.on(
-      Manager.EVENT_ERROR,
-      fun(_) {
-        startTime[0] = Date().time
-      }
-    )
+    manager.on(Manager.EVENT_ERROR, { _ -> startTime[0] = Date().time })
     manager.on(
       Manager.EVENT_RECONNECT_ATTEMPT,
-      fun(_) {
+      { _ ->
         reconnects[0]++
         val currentTime = Date().time
         val delay = currentTime - startTime[0]
@@ -370,12 +345,7 @@ class ConnectionTest : Connection("client") {
         prevDelay[0] = delay
       }
     )
-    manager.on(
-      Manager.EVENT_RECONNECT_FAILED,
-      fun(_) {
-        values.offer(true)
-      }
-    )
+    manager.on(Manager.EVENT_RECONNECT_FAILED, { _ -> values.offer(true) })
     socket.connect()
     values.take()
     assertEquals(3, reconnects[0])
@@ -394,13 +364,8 @@ class ConnectionTest : Connection("client") {
     val socket = IO.socket(uri() + "/invalid", opts)
     socket.io.on(
       Manager.EVENT_ERROR,
-      fun(_) {
-        socket.io.on(
-          Manager.EVENT_RECONNECT_ATTEMPT,
-          fun(_) {
-            values.offer(false)
-          }
-        )
+      { _ ->
+        socket.io.on(Manager.EVENT_RECONNECT_ATTEMPT, { _ -> values.offer(false) })
         socket.disconnect()
         Timer()
           .schedule(
@@ -427,13 +392,8 @@ class ConnectionTest : Connection("client") {
     val socket = IO.socket(uri() + "/invalid", opts)
     socket.io.once(
       Manager.EVENT_RECONNECT_ATTEMPT,
-      fun(_) {
-        socket.io.on(
-          Manager.EVENT_RECONNECT_ATTEMPT,
-          fun(_) {
-            values.offer(false)
-          }
-        )
+      { _ ->
+        socket.io.on(Manager.EVENT_RECONNECT_ATTEMPT, { _ -> values.offer(false) })
         socket.disconnect()
         // set a timer to let reconnection possibly fire
         Timer()
@@ -462,13 +422,8 @@ class ConnectionTest : Connection("client") {
     val socket = client("/invalid", opts)
     socket.io.once(
       Manager.EVENT_RECONNECT_ATTEMPT,
-      fun(_) {
-        socket.io.once(
-          Manager.EVENT_RECONNECT_ATTEMPT,
-          fun(_) {
-            values.offer("done")
-          }
-        )
+      { _ ->
+        socket.io.once(Manager.EVENT_RECONNECT_ATTEMPT, { _ -> values.offer("done") })
         socket.disconnect()
         socket.connect()
       }
@@ -487,16 +442,11 @@ class ConnectionTest : Connection("client") {
     val socket2 = manager.socket("/asd")
     manager.on(
       Manager.EVENT_RECONNECT_ATTEMPT,
-      fun(_) {
-        socket1.on(
-          SocketClient.EVENT_CONNECT,
-          fun(_) {
-            values.offer(false)
-          }
-        )
+      { _ ->
+        socket1.on(SocketClient.EVENT_CONNECT, { _ -> values.offer(false) })
         socket2.on(
           SocketClient.EVENT_CONNECT,
-          fun(_) {
+          { _ ->
             Timer()
               .schedule(
                 object : TimerTask() {
@@ -535,11 +485,11 @@ class ConnectionTest : Connection("client") {
     val socket1 = manager.socket("/foo")
     socket1.on(
       SocketClient.EVENT_CONNECT,
-      fun(_) {
+      { _ ->
         val socket2 = manager.socket("/asd")
         socket2.on(
           SocketClient.EVENT_CONNECT,
-          fun(_) {
+          { _ ->
             values.offer("done")
             socket2.disconnect()
           }
@@ -565,18 +515,8 @@ class ConnectionTest : Connection("client") {
     val socket = manager.socket("/asd")
     val reconnects = intArrayOf(0)
 
-    manager.on(
-      Manager.EVENT_RECONNECT_ATTEMPT,
-      fun(_) {
-        reconnects[0]++
-      }
-    )
-    manager.on(
-      Manager.EVENT_RECONNECT_FAILED,
-      fun(_) {
-        values.offer(reconnects[0])
-      }
-    )
+    manager.on(Manager.EVENT_RECONNECT_ATTEMPT, { _ -> reconnects[0]++ })
+    manager.on(Manager.EVENT_RECONNECT_FAILED, { _ -> values.offer(reconnects[0]) })
     socket.open()
     assertEquals(2, values.take() as Int)
     socket.close()
@@ -595,15 +535,10 @@ class ConnectionTest : Connection("client") {
     val manager = Manager(uri(), opts)
     val reconnects = intArrayOf(0)
     val socket = manager.socket("/timeout")
-    manager.on(
-      Manager.EVENT_RECONNECT_ATTEMPT,
-      fun(_) {
-        reconnects[0]++
-      }
-    )
+    manager.on(Manager.EVENT_RECONNECT_ATTEMPT, { _ -> reconnects[0]++ })
     manager.on(
       Manager.EVENT_RECONNECT_FAILED,
-      fun(_) {
+      { _ ->
         socket.close()
         manager.close()
         values.offer(reconnects[0])
@@ -624,14 +559,14 @@ class ConnectionTest : Connection("client") {
     val socket = manager.socket("/invalid")
     manager.on(
       Manager.EVENT_RECONNECT_ATTEMPT,
-      fun(_) {
+      { _ ->
         socket.close()
         throw RuntimeException()
       }
     )
     manager.on(
       Manager.EVENT_ERROR,
-      fun(_) {
+      { _ ->
         val timer = Timer()
         timer.schedule(
           object : TimerTask() {

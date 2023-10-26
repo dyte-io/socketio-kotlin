@@ -106,11 +106,10 @@ class WebSocketTransport : Transport {
   override fun write(packets: List<EnginePacket>) {
     writable = false
 
-    var done =
-      fun() {
-        writable = true
-        emit("drain")
-      }
+    var done = { ->
+      writable = true
+      emit("drain")
+    }
 
     var total = packets.size
     packets.forEach {

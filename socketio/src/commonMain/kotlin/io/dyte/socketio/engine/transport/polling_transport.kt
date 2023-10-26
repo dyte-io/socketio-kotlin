@@ -47,12 +47,11 @@ abstract class PollingTransport : Transport {
 
     readyState = "pausing"
 
-    var pause =
-      fun() {
-        Logger.debug("Polling paused")
-        self.readyState = "paused"
-        onPause()
-      }
+    var pause = { ->
+      Logger.debug("Polling paused")
+      self.readyState = "paused"
+      onPause()
+    }
 
     if (polling == true || writable != true) {
       var total = 0
@@ -62,7 +61,7 @@ abstract class PollingTransport : Transport {
         total++
         once(
           "pollComplete",
-          fun(d: Any?) {
+          { d: Any? ->
             Logger.debug("pre-pause polling complete")
             if (--total == 0) pause()
           }
@@ -74,7 +73,7 @@ abstract class PollingTransport : Transport {
         total++
         once(
           "drain",
-          fun(data: Any?) {
+          { data: Any? ->
             Logger.debug("pre-pause writing complete")
             if (--total == 0) pause()
           }
@@ -130,11 +129,10 @@ abstract class PollingTransport : Transport {
   override fun doClose() {
     var self = this
 
-    var _close =
-      fun(data: Any?) {
-        Logger.debug("writing close packet")
-        self.write(listOf(EnginePacket.Close))
-      }
+    var _close = { data: Any? ->
+      Logger.debug("writing close packet")
+      self.write(listOf(EnginePacket.Close))
+    }
 
     if ("open" == readyState) {
       Logger.info("transport open - closing")
@@ -156,11 +154,10 @@ abstract class PollingTransport : Transport {
   override fun write(packets: List<EnginePacket>) {
     var self = this
     writable = false
-    var callbackfn =
-      fun(data: Any?) {
-        self.writable = true
-        self.emit("drain")
-      }
+    var callbackfn = { data: Any? ->
+      self.writable = true
+      self.emit("drain")
+    }
 
     val serialized = EnginePacketParser.encodeMultiplePacket(packets)
     self.doWrite(serialized, callbackfn)

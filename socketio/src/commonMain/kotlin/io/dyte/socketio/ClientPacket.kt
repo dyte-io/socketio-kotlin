@@ -88,13 +88,13 @@ sealed class ClientPacket {
 
   fun toCharType(): Char {
     return when (this) {
-      is Connect -> '0'
-      is Disconnect -> '1'
-      is Event -> '2'
-      is Ack -> '3'
-      is ConnectError -> '4'
-      is BinaryEvent -> '5'
-      is BinaryAck -> '6'
-    }
+      is Connect -> ClientParser.CONNECT
+      is Disconnect -> ClientParser.DISCONNECT
+      is Event -> ClientParser.EVENT
+      is Ack -> ClientParser.ACK
+      is ConnectError -> ClientParser.CONNECT_ERROR
+      is BinaryEvent -> ClientParser.BINARY_EVENT
+      is BinaryAck -> ClientParser.BINARY_ACK
+    }.digitToChar()
   }
 }
