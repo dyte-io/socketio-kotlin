@@ -30,7 +30,7 @@ class ConnectionTest : Connection("engine") {
   @Test(timeout = TIMEOUT.toLong())
   fun receiveMultibyteUTF8StringsWithPolling() {
     val values: BlockingQueue<Any> = LinkedBlockingQueue()
-    var socket = EngineSocket(_opts = createOptions())
+    val socket = EngineSocket(_opts = createOptions())
     socket.on(
       EngineSocket.EVENT_OPEN,
       handler = { _ ->
@@ -38,7 +38,7 @@ class ConnectionTest : Connection("engine") {
         socket.on(
           EngineSocket.EVENT_MESSAGE,
           handler = { data: Any? ->
-            if (data as String == "hi") return
+            if (data as String == "hi") return@on
             values.offer(data)
             socket.close()
           }
@@ -52,7 +52,7 @@ class ConnectionTest : Connection("engine") {
   @Test(timeout = TIMEOUT.toLong())
   fun receiveEmoji() {
     val values: BlockingQueue<Any> = LinkedBlockingQueue()
-    var socket = EngineSocket(_opts = createOptions())
+    val socket = EngineSocket(_opts = createOptions())
     socket.on(
       EngineSocket.EVENT_OPEN,
       handler = { _ ->
@@ -60,7 +60,7 @@ class ConnectionTest : Connection("engine") {
         socket.on(
           EngineSocket.EVENT_MESSAGE,
           handler = { data: Any? ->
-            if (data as String == "hi") return
+            if (data as String == "hi") return@on
             values.offer(data)
             socket.close()
           }
@@ -78,7 +78,7 @@ class ConnectionTest : Connection("engine") {
   @Throws(InterruptedException::class)
   fun notSendPacketsIfSocketCloses() {
     val values: BlockingQueue<Any> = LinkedBlockingQueue()
-    var socket = EngineSocket(_opts = createOptions())
+    val socket = EngineSocket(_opts = createOptions())
     socket.on(
       EngineSocket.EVENT_OPEN,
       handler = { _ ->
@@ -105,7 +105,7 @@ class ConnectionTest : Connection("engine") {
   @Throws(InterruptedException::class)
   fun deferCloseWhenUpgrading() {
     val values: BlockingQueue<Any> = LinkedBlockingQueue()
-    var socket = EngineSocket(_opts = createOptions())
+    val socket = EngineSocket(_opts = createOptions())
     socket.on(
       EngineSocket.EVENT_OPEN,
       handler = { _ ->
@@ -128,7 +128,7 @@ class ConnectionTest : Connection("engine") {
   @Throws(InterruptedException::class)
   fun closeOnUpgradeErrorIfClosingIsDeferred() {
     val values: BlockingQueue<Any> = LinkedBlockingQueue()
-    var socket = EngineSocket(_opts = createOptions())
+    val socket = EngineSocket(_opts = createOptions())
     socket.on(
       EngineSocket.EVENT_OPEN,
       handler = { _ ->
@@ -151,7 +151,7 @@ class ConnectionTest : Connection("engine") {
   @Throws(InterruptedException::class)
   fun notSendPacketsIfClosingIsDeferred() {
     val values: BlockingQueue<Any> = LinkedBlockingQueue()
-    var socket = EngineSocket(_opts = createOptions())
+    val socket = EngineSocket(_opts = createOptions())
     socket.on(
       EngineSocket.EVENT_OPEN,
       handler = { _ ->
@@ -183,7 +183,7 @@ class ConnectionTest : Connection("engine") {
   @Throws(InterruptedException::class)
   fun sendAllBufferedPacketsIfClosingIsDeferred() {
     val values: BlockingQueue<Any> = LinkedBlockingQueue()
-    var socket = EngineSocket(_opts = createOptions())
+    val socket = EngineSocket(_opts = createOptions())
     socket.on(
       EngineSocket.EVENT_OPEN,
       handler = { _ ->
@@ -208,7 +208,7 @@ class ConnectionTest : Connection("engine") {
   @Throws(InterruptedException::class)
   fun receivePing() {
     val values: BlockingQueue<Any> = LinkedBlockingQueue()
-    var socket = EngineSocket(_opts = createOptions())
+    val socket = EngineSocket(_opts = createOptions())
     socket.on(
       EngineSocket.EVENT_PING,
       handler = { _ ->

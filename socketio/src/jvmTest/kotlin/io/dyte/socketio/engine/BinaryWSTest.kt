@@ -20,19 +20,13 @@ class BinaryWSTest : Connection("engine") {
     opts.port = PORT
     opts.transports = mutableListOf<String>("websocket")
     val socket = EngineSocket(_opts = opts)
-    socket.on(
-      EngineSocket.EVENT_OPEN,
-      { _ ->
-        socket.send(binaryData)
-        socket.on(
-          EngineSocket.EVENT_MESSAGE,
-          { data: Any? ->
-            if ("hi" == data) return
-            values.offer(data)
-          }
-        )
+    socket.on(EngineSocket.EVENT_OPEN) { _ ->
+      socket.send(binaryData)
+      socket.on(EngineSocket.EVENT_MESSAGE) { data: Any? ->
+        if ("hi" == data) return@on
+        values.offer(data)
       }
-    )
+    }
     socket.open()
     assert(binaryData.contentEquals(values.take() as ByteArray))
     socket.close()
@@ -50,20 +44,14 @@ class BinaryWSTest : Connection("engine") {
     opts.port = PORT
     opts.transports = mutableListOf<String>("websocket")
     val socket = EngineSocket(_opts = opts)
-    socket.on(
-      EngineSocket.EVENT_OPEN,
-      { _ ->
-        socket.send(binaryData)
-        socket.send("cash money €€€")
-        socket.on(
-          EngineSocket.EVENT_MESSAGE,
-          { data: Any? ->
-            if ("hi" == data) return
-            values.offer(data)
-          }
-        )
+    socket.on(EngineSocket.EVENT_OPEN) { _ ->
+      socket.send(binaryData)
+      socket.send("cash money €€€")
+      socket.on(EngineSocket.EVENT_MESSAGE) { data: Any? ->
+        if ("hi" == data) return@on
+        values.offer(data)
       }
-    )
+    }
     socket.open()
     assert(binaryData.contentEquals(values.take() as ByteArray))
     assertEquals("cash money €€€", values.take() as String)

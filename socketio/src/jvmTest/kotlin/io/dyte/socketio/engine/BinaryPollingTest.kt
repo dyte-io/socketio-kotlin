@@ -19,19 +19,13 @@ class BinaryPollingTest : Connection("engine") {
     opts.port = PORT
     opts.transports = mutableListOf<String>("polling")
     val socket = EngineSocket(_opts = opts)
-    socket.on(
-      EngineSocket.EVENT_OPEN,
-      { _ ->
-        socket.send(binaryData)
-        socket.on(
-          EngineSocket.EVENT_MESSAGE,
-          { data: Any? ->
-            if ("hi" == data) return
-            values.offer(data)
-          }
-        )
+    socket.on(EngineSocket.EVENT_OPEN) { _ ->
+      socket.send(binaryData)
+      socket.on(EngineSocket.EVENT_MESSAGE) { data: Any? ->
+        if ("hi" == data) return@on
+        values.offer(data)
       }
-    )
+    }
     socket.open()
     assert(binaryData.contentEquals(values.take() as ByteArray))
     socket.close()
@@ -48,23 +42,17 @@ class BinaryPollingTest : Connection("engine") {
     val msg = intArrayOf(0)
     val opts = createOptions()
     opts.port = PORT
-    opts.transports = mutableListOf<String>("polling")
+    opts.transports = mutableListOf("polling")
     val socket = EngineSocket(_opts = opts)
-    socket.on(
-      EngineSocket.EVENT_OPEN,
-      { _ ->
-        socket.send(binaryData)
-        socket.send("cash money €€€")
-        socket.on(
-          EngineSocket.EVENT_MESSAGE,
-          { data: Any? ->
-            if ("hi" == data) return
-            values.offer(data)
-            msg[0]++
-          }
-        )
+    socket.on(EngineSocket.EVENT_OPEN) { _ ->
+      socket.send(binaryData)
+      socket.send("cash money €€€")
+      socket.on(EngineSocket.EVENT_MESSAGE) { data: Any? ->
+        if ("hi" == data) return@on
+        values.offer(data)
+        msg[0]++
       }
-    )
+    }
     socket.open()
     assert(binaryData.contentEquals(values.take() as ByteArray))
     assertEquals("cash money €€€", values.take() as String)
