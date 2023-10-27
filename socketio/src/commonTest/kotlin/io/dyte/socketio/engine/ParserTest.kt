@@ -2,21 +2,13 @@ package io.dyte.socketio.engine
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertTrue
+import kotlin.test.assertIs
 
 class ParserTest {
-  val ERROR_DATA = "parser error"
-
-  @Test
-  fun encodeAsString() {
-    val encodedPacket = EnginePacketParser.encodePacket(EnginePacket.Message("test"))
-    assertTrue(encodedPacket is String)
-  }
-
   @Test
   fun decodeAsPacket() {
     val data = EnginePacketParser.encodePacket(EnginePacket.Message("test"))
-    assertTrue(EnginePacketParser.decodePacket(data) is EnginePacket)
+    assertIs<EnginePacket>(EnginePacketParser.decodePacket(data))
   }
 
   //
@@ -24,7 +16,7 @@ class ParserTest {
   fun noData() {
     val data = EnginePacketParser.encodePacket(EnginePacket.Message())
     val decoded = EnginePacketParser.decodePacket(data)
-    assertTrue(decoded is EnginePacket.Message)
+    assertIs<EnginePacket.Message>(decoded)
     assertEquals(null, decoded.payload)
   }
 
@@ -33,7 +25,7 @@ class ParserTest {
   //        EnginePacketParser.serializePacket(
   //            EnginePacket(EnginePacket.OPEN, "{\"some\":\"json\"}"),
   //            supportsBinary = false,
-  //            callback = fun(data: Any) {
+  //            callback = { data ->
   //                val p = EnginePacketParser.deserializePacket(data)
   //                assertEquals(EnginePacket.OPEN, p.type)
   //                assertEquals("{\"some\":\"json\"}", p.payload)
@@ -43,7 +35,7 @@ class ParserTest {
   //    @Test
   //    fun encodeClosePacket() {
   //        EnginePacketParser.serializePacket(EnginePacket<String>(EnginePacket.CLOSE), false,
-  //            callback = fun(data: Any) {
+  //            callback = { data ->
   //                val p = EnginePacketParser.deserializePacket(data)
   //                assertTrue(p.type == EnginePacket.CLOSE)
   //            })
@@ -53,7 +45,7 @@ class ParserTest {
   //    fun encodePingPacket() {
   //        EnginePacketParser.serializePacket(EnginePacket(EnginePacket.PING, "1"), false, callback
   // =
-  //        fun(data: Any) {
+  //        { data ->
   //            val p = EnginePacketParser.deserializePacket(data)
   //            assertEquals(EnginePacket.PING, p.type)
   //            assertEquals("1", p.payload)
@@ -65,7 +57,7 @@ class ParserTest {
   //    fun encodePongPacket() {
   //        EnginePacketParser.serializePacket(EnginePacket(EnginePacket.PONG, "1"), false, callback
   // =
-  //        fun(data: Any) {
+  //        { data ->
   //            val p = EnginePacketParser.deserializePacket(data)
   //            assertEquals(EnginePacket.PONG, p.type)
   //            assertEquals("1", p.payload)
@@ -75,7 +67,7 @@ class ParserTest {
   //    @Test
   //    fun encodeMessagePacket() {
   //        EnginePacketParser.serializePacket(EnginePacket(EnginePacket.MESSAGE, "aaa"), false,
-  //            callback = fun(data: Any) {
+  //            callback = { data ->
   //                val p = EnginePacketParser.deserializePacket(data)
   //                assertEquals(EnginePacket.MESSAGE, p.type)
   //                assertEquals("aaa", p.payload)
@@ -86,7 +78,7 @@ class ParserTest {
   //    fun encodeUTF8SpecialCharsMessagePacket() {
   //        EnginePacketParser.serializePacket(
   //            EnginePacket<String>(EnginePacket.MESSAGE, "utf8 — string"),
-  //            false, callback = fun(data: Any) {
+  //            false, callback = { data ->
   //                val p = EnginePacketParser.deserializePacket(data)
   //                assertEquals(p.type, EnginePacket.MESSAGE)
   //                assertEquals(p.payload, "utf8 — string")
@@ -96,7 +88,7 @@ class ParserTest {
   //    @Test
   //    fun encodeMessagePacketCoercingToString() {
   //        EnginePacketParser.serializePacket(EnginePacket(EnginePacket.MESSAGE, 1), false,
-  //            callback = fun(data: Any) {
+  //            callback = { data ->
   //                val p = EnginePacketParser.deserializePacket(data)
   //                assertEquals(EnginePacket.MESSAGE, p.type)
   //                assertEquals("1", p.payload)
@@ -106,7 +98,7 @@ class ParserTest {
   //    @Test
   //    fun encodeUpgradePacket() {
   //        EnginePacketParser.serializePacket(EnginePacket<String>(EnginePacket.UPGRADE), false,
-  //            callback = fun(data: Any) {
+  //            callback = { data ->
   //                val p = EnginePacketParser.deserializePacket(data)
   //                assertEquals(p.type, EnginePacket.UPGRADE)
   //            })
@@ -115,11 +107,11 @@ class ParserTest {
   //    @Test
   //    fun encodingFormat() {
   //        EnginePacketParser.serializePacket(EnginePacket(EnginePacket.MESSAGE, "test"), false,
-  //            callback = fun(data: Any) {
+  //            callback = { data ->
   //                assertTrue((data as String).matches(Regex("[0-9].*")) == true)
   //            })
   //        EnginePacketParser.serializePacket(EnginePacket<String>(EnginePacket.MESSAGE), false,
-  //            callback = fun(data: Any) {
+  //            callback = { data ->
   //                assertTrue((data as String).matches(Regex("[0-9]")) == true)
   //            })
   //    }
@@ -150,7 +142,7 @@ class ParserTest {
   //        EnginePacketParser.serializeMultiplePacket(
   //            listOf(EnginePacket<Any?>(EnginePacket.PING),
   // EnginePacket<Any?>(EnginePacket.PONG)),
-  //            callback = fun(data: Any) {
+  //            callback = { data ->
   //                assertTrue(data is String)
   //            })
   //    }
@@ -159,7 +151,7 @@ class ParserTest {
   //    fun encodeAndDecodePayloads() {
   //        EnginePacketParser.serializeMultiplePacket(
   //            listOf<EnginePacket<*>>(EnginePacket<String>(EnginePacket.MESSAGE, "a")),
-  //            callback = fun(data: String) {
+  //            callback = { data ->
   //                val packets = EnginePacketParser.deserializeMultiplePacket(data);
   //                packets.forEachIndexed { index, packet ->
   //                    val isLast = index + 1 == packets.size
@@ -170,7 +162,7 @@ class ParserTest {
   //            listOf<EnginePacket<*>>(
   //                EnginePacket<String>(EnginePacket.MESSAGE, "a"),
   //                EnginePacket<Any?>(EnginePacket.PING)
-  //            ), callback = fun(data: String) {
+  //            ), callback = { data ->
   //                val packets = EnginePacketParser.deserializeMultiplePacket(data)
   //                packets.forEachIndexed { index, packet ->
   //                    val isLast = index + 1 == packets.size
@@ -188,7 +180,7 @@ class ParserTest {
   //    fun encodeAndDecodeEmptyPayloads() {
   //        EnginePacketParser.serializeMultiplePacket(
   //            listOf<EnginePacket<*>>(),
-  //            callback = fun(data: String) {
+  //            callback = { data ->
   //                val packets = EnginePacketParser.deserializeMultiplePacket(data)
   //                packets.forEachIndexed { index, packet ->
   //                    assertEquals(EnginePacket.OPEN, packet.type)
@@ -203,7 +195,7 @@ class ParserTest {
   //        EnginePacketParser.serializeMultiplePacket(listOf<EnginePacket<*>>(
   //            EnginePacket<Any?>(EnginePacket.MESSAGE, "€€€"),
   //            EnginePacket<Any?>(EnginePacket.MESSAGE, "α")
-  //        ), callback = fun(data: String) {
+  //        ), callback = { data ->
   //            assertTrue(data == "4€€€\u001e4α")
   //        })
   //    }
@@ -250,7 +242,7 @@ class ParserTest {
   //        EnginePacketParser.serializePacket(
   //            EnginePacket(EnginePacket.MESSAGE, data),
   //            false,
-  //            callback = fun(encoded: Any) {
+  //            callback = { encoded: Any ->
   //                val p = EnginePacketParser.deserializePacket(encoded)
   //                assertEquals(EnginePacket.MESSAGE, p.type)
   //                assertTrue(data.contentEquals(p.payload as ByteArray?))
@@ -271,7 +263,7 @@ class ParserTest {
   //            listOf<EnginePacket<*>>(
   //                EnginePacket(EnginePacket.MESSAGE, firstBuffer),
   //                EnginePacket(EnginePacket.MESSAGE, secondBuffer)
-  //            ), callback = fun(data: String) {
+  //            ), callback = { data ->
   //                val packets = EnginePacketParser.deserializeMultiplePacket(data)
   //                packets.forEachIndexed { index, p ->
   //                    val isLast = index + 1 == packets.size
@@ -297,7 +289,7 @@ class ParserTest {
   //                EnginePacket(EnginePacket.MESSAGE, firstBuffer),
   //                EnginePacket(EnginePacket.MESSAGE, "hello"),
   //                EnginePacket<String>(EnginePacket.CLOSE)
-  //            ), callback = fun(encoded: String) {
+  //            ), callback = { encoded: String ->
   //                val packets = EnginePacketParser.deserializeMultiplePacket(encoded)
   //                packets.forEachIndexed { index, p ->
   //                    if (index == 0) {

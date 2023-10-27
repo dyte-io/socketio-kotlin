@@ -108,44 +108,35 @@ class Manager(private var uri: String, private var options: ManagerOptions) : Ev
 
     // emit `open`
     val openSubDestroy =
-      Util.on(
-        engine,
-        "open",
-        fun(_) {
-          onOpen()
-          if (callback != null) callback(null)
-        }
-      )
+      Destroyable.new(engine, "open") { _ ->
+        onOpen()
+        if (callback != null) callback(null)
+      }
 
     // emit `connect_error`
     val errorSub =
-      Util.on(
-        engine,
-        "error",
-        fun(data) {
-          Logger.error("Manager connect_error")
-          cleanup()
-          readyState = "closed"
-          super.emit(EVENT_ERROR, data)
-          if (callback != null) {
-            callback(mutableMapOf("error" to "Connection error", "data" to data))
-          } else {
-            // Only do this if there is no fn to handle the error
-            maybeReconnectOnOpen()
-          }
+      Destroyable.new(engine, "error") { data ->
+        Logger.error("Manager connect_error")
+        cleanup()
+        readyState = "closed"
+        super.emit(EVENT_ERROR, data)
+        if (callback != null) {
+          callback(mutableMapOf("error" to "Connection error", "data" to data))
+        } else {
+          // Only do this if there is no fn to handle the error
+          maybeReconnectOnOpen()
         }
-      )
+      }
 
     // emit `connect_timeout`
     if (timeout > -1) {
       Logger.info("connect attempt will timeout after $timeout")
-      val timeoutFx =
-        fun() {
-          Logger.debug("connect attempt timed out after $timeout")
-          openSubDestroy.destroy()
-          engine.emit(EVENT_ERROR, "timeout")
-          engine.close()
-        }
+      val timeoutFx: () -> Unit = {
+        Logger.debug("connect attempt timed out after $timeout")
+        openSubDestroy.destroy()
+        engine.emit(EVENT_ERROR, "timeout")
+        engine.close()
+      }
       if (timeout == 0L) {
         // prevents a race condition with the "open" event
         timeoutFx()
@@ -155,13 +146,7 @@ class Manager(private var uri: String, private var options: ManagerOptions) : Ev
       val timer = Timer(timeout, timeoutFx)
       timer.schedule()
 
-      subs.add(
-        Destroyable(
-          fun() {
-            timer.cancel()
-          }
-        )
-      )
+      subs.add(Destroyable { timer.cancel() })
     }
 
     subs.add(openSubDestroy)
@@ -182,11 +167,11 @@ class Manager(private var uri: String, private var options: ManagerOptions) : Ev
     emit("open")
 
     // add subs
-    subs.add(Util.on(engine, "data", ::onData))
-    subs.add(Util.on(engine, "ping", ::onPing))
-    // subs.add(Util.on(engine, "pong", onPong));
-    subs.add(Util.on(engine, "error", ::onError))
-    subs.add(Util.on(engine, "close", ::onClose))
+    subs.add(Destroyable.new(engine, "data", ::onData))
+    subs.add(Destroyable.new(engine, "ping", ::onPing))
+    // subs.add(Destroyable.new(engine, "pong", onPong));
+    subs.add(Destroyable.new(engine, "error", ::onError))
+    subs.add(Destroyable.new(engine, "close", ::onClose))
   }
 
   /** Called upon a ping. */
@@ -306,45 +291,36 @@ class Manager(private var uri: String, private var options: ManagerOptions) : Ev
 
       reconnecting = true
       val timer =
-        Timer(
-          delay,
-          fun() {
-            Logger.debug("attempting reconnect 0")
-            // TODO: RECHECK
-            if (skipReconnect) return
+        Timer(delay) {
+          Logger.debug("attempting reconnect 0")
+          // TODO: RECHECK
+          if (skipReconnect) return@Timer
 
-            Logger.info("attempting reconnect")
-            emit(EVENT_RECONNECT_ATTEMPT, backoff.attempts)
+          Logger.info("attempting reconnect")
+          emit(EVENT_RECONNECT_ATTEMPT, backoff.attempts)
 
-            // check again for the case socket closed in above events
-            if (skipReconnect) return
+          // check again for the case socket closed in above events
+          if (skipReconnect) return@Timer
 
-            open(
-              fun(err) {
-                if (err != null) {
-                  Logger.warn("reconnect attempt error")
-                  reconnecting = false
-                  reconnect()
-                  //            emit("reconnect_error", err as MutableMap.get("data"));
-                  emit("reconnect_error", "")
-                } else {
-                  Logger.info("reconnect success")
-                  onReconnect()
-                }
-              },
-              this.options
-            )
-          }
-        )
+          open(
+            { err ->
+              if (err != null) {
+                Logger.warn("reconnect attempt error")
+                reconnecting = false
+                reconnect()
+                //            emit("reconnect_error", err as MutableMap.get("data"));
+                emit("reconnect_error", "")
+              } else {
+                Logger.info("reconnect success")
+                onReconnect()
+              }
+            },
+            this.options
+          )
+        }
       timer.schedule()
 
-      subs.add(
-        Destroyable(
-          fun() {
-            timer.cancel()
-          }
-        )
-      )
+      subs.add(Destroyable { timer.cancel() })
     }
     return this
   }
@@ -388,7 +364,7 @@ class Backoff(
         ms = if (((floor(rand * 10).toInt()).and(1)) == 0) (min - deviation) else (min + deviation)
       }
       // #39: avoid an overflow with negative value
-      if (max < +min) {
+      if (max < min) {
         ms = max.toDouble()
       }
       return if (min <= 0) max else ms.toLong()

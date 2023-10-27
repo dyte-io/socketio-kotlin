@@ -16,9 +16,8 @@ class BackoffTest {
     assertTrue(200L == b.duration)
   }
 
-  @Test()
+  @Test
   fun ensureJitterIsValid() {
-    val b = Backoff()
-    assertFailsWith<IllegalArgumentException> { b.jitter(2.0) }
+    assertFailsWith<IllegalArgumentException> { Backoff(jitter = 2.0) }
   }
 }

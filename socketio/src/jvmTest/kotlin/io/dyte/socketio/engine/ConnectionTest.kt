@@ -17,11 +17,10 @@ class ConnectionTest : Connection("engine") {
     var socket = EngineSocket(_opts = createOptions())
     socket.on(
       EngineSocket.EVENT_OPEN,
-      handler =
-        fun(_) {
-          values.offer(true)
-          socket.close()
-        }
+      handler = { _ ->
+        values.offer(true)
+        socket.close()
+      }
     )
 
     socket.open()
@@ -31,22 +30,20 @@ class ConnectionTest : Connection("engine") {
   @Test(timeout = TIMEOUT.toLong())
   fun receiveMultibyteUTF8StringsWithPolling() {
     val values: BlockingQueue<Any> = LinkedBlockingQueue()
-    var socket = EngineSocket(_opts = createOptions())
+    val socket = EngineSocket(_opts = createOptions())
     socket.on(
       EngineSocket.EVENT_OPEN,
-      handler =
-        fun(_) {
-          socket.send("cash money €€€")
-          socket.on(
-            EngineSocket.EVENT_MESSAGE,
-            handler =
-              fun(data: Any?) {
-                if (data as String == "hi") return
-                values.offer(data)
-                socket.close()
-              }
-          )
-        }
+      handler = { _ ->
+        socket.send("cash money €€€")
+        socket.on(
+          EngineSocket.EVENT_MESSAGE,
+          handler = { data: Any? ->
+            if (data as String == "hi") return@on
+            values.offer(data)
+            socket.close()
+          }
+        )
+      }
     )
     socket.open()
     assertEquals("cash money €€€", values.take() as String)
@@ -55,22 +52,20 @@ class ConnectionTest : Connection("engine") {
   @Test(timeout = TIMEOUT.toLong())
   fun receiveEmoji() {
     val values: BlockingQueue<Any> = LinkedBlockingQueue()
-    var socket = EngineSocket(_opts = createOptions())
+    val socket = EngineSocket(_opts = createOptions())
     socket.on(
       EngineSocket.EVENT_OPEN,
-      handler =
-        fun(_) {
-          socket.send("\uD800\uDC00-\uDB7F\uDFFF\uDB80\uDC00-\uDBFF\uDFFF\uE000-\uF8FF")
-          socket.on(
-            EngineSocket.EVENT_MESSAGE,
-            handler =
-              fun(data: Any?) {
-                if (data as String == "hi") return
-                values.offer(data)
-                socket.close()
-              }
-          )
-        }
+      handler = { _ ->
+        socket.send("\uD800\uDC00-\uDB7F\uDFFF\uDB80\uDC00-\uDBFF\uDFFF\uE000-\uF8FF")
+        socket.on(
+          EngineSocket.EVENT_MESSAGE,
+          handler = { data: Any? ->
+            if (data as String == "hi") return@on
+            values.offer(data)
+            socket.close()
+          }
+        )
+      }
     )
     socket.open()
     assertEquals(
@@ -83,31 +78,24 @@ class ConnectionTest : Connection("engine") {
   @Throws(InterruptedException::class)
   fun notSendPacketsIfSocketCloses() {
     val values: BlockingQueue<Any> = LinkedBlockingQueue()
-    var socket = EngineSocket(_opts = createOptions())
+    val socket = EngineSocket(_opts = createOptions())
     socket.on(
       EngineSocket.EVENT_OPEN,
-      handler =
-        fun(_) {
-          val noPacket = booleanArrayOf(true)
-          socket.on(
-            EngineSocket.EVENT_PACKET_CREATE,
-            handler =
-              fun(_) {
-                noPacket[0] = false
-              }
-          )
-          socket.close()
-          socket.send("hi")
-          val timer = Timer()
-          timer.schedule(
-            object : TimerTask() {
-              override fun run() {
-                values.offer(noPacket[0])
-              }
-            },
-            1200
-          )
-        }
+      handler = { _ ->
+        val noPacket = booleanArrayOf(true)
+        socket.on(EngineSocket.EVENT_PACKET_CREATE, handler = { _ -> noPacket[0] = false })
+        socket.close()
+        socket.send("hi")
+        val timer = Timer()
+        timer.schedule(
+          object : TimerTask() {
+            override fun run() {
+              values.offer(noPacket[0])
+            }
+          },
+          1200
+        )
+      }
     )
     socket.open()
     assertTrue(values.take() as Boolean)
@@ -117,34 +105,20 @@ class ConnectionTest : Connection("engine") {
   @Throws(InterruptedException::class)
   fun deferCloseWhenUpgrading() {
     val values: BlockingQueue<Any> = LinkedBlockingQueue()
-    var socket = EngineSocket(_opts = createOptions())
+    val socket = EngineSocket(_opts = createOptions())
     socket.on(
       EngineSocket.EVENT_OPEN,
-      handler =
-        fun(_) {
-          val upgraded = booleanArrayOf(false)
-          socket.on(
-            EngineSocket.EVENT_UPGRADE,
-            handler =
-              fun(_) {
-                upgraded[0] = true
-              }
-          )
-          socket.on(
-            EngineSocket.EVENT_UPGRADING,
-            handler =
-              fun(_) {
-                socket.on(
-                  EngineSocket.EVENT_CLOSE,
-                  handler =
-                    fun(_) {
-                      values.offer(upgraded[0])
-                    }
-                )
-                socket.close()
-              }
-          )
-        }
+      handler = { _ ->
+        val upgraded = booleanArrayOf(false)
+        socket.on(EngineSocket.EVENT_UPGRADE, handler = { _ -> upgraded[0] = true })
+        socket.on(
+          EngineSocket.EVENT_UPGRADING,
+          handler = { _ ->
+            socket.on(EngineSocket.EVENT_CLOSE, handler = { _ -> values.offer(upgraded[0]) })
+            socket.close()
+          }
+        )
+      }
     )
     socket.open()
     assertTrue(values.take() as Boolean)
@@ -154,35 +128,21 @@ class ConnectionTest : Connection("engine") {
   @Throws(InterruptedException::class)
   fun closeOnUpgradeErrorIfClosingIsDeferred() {
     val values: BlockingQueue<Any> = LinkedBlockingQueue()
-    var socket = EngineSocket(_opts = createOptions())
+    val socket = EngineSocket(_opts = createOptions())
     socket.on(
       EngineSocket.EVENT_OPEN,
-      handler =
-        fun(_) {
-          val upgradError = booleanArrayOf(false)
-          socket.on(
-            EngineSocket.EVENT_UPGRADE_ERROR,
-            handler =
-              fun(_) {
-                upgradError[0] = true
-              }
-          )
-          socket.on(
-            EngineSocket.EVENT_UPGRADING,
-            handler =
-              fun(_) {
-                socket.on(
-                  EngineSocket.EVENT_CLOSE,
-                  handler =
-                    fun(_) {
-                      values.offer(upgradError[0])
-                    }
-                )
-                socket.transport?.onError("upgrade error", "")
-                socket.close()
-              }
-          )
-        }
+      handler = { _ ->
+        val upgradError = booleanArrayOf(false)
+        socket.on(EngineSocket.EVENT_UPGRADE_ERROR, handler = { _ -> upgradError[0] = true })
+        socket.on(
+          EngineSocket.EVENT_UPGRADING,
+          handler = { _ ->
+            socket.on(EngineSocket.EVENT_CLOSE, handler = { _ -> values.offer(upgradError[0]) })
+            socket.transport?.onError("upgrade error", "")
+            socket.close()
+          }
+        )
+      }
     )
     socket.open()
     assertTrue(values.take() as Boolean)
@@ -191,37 +151,29 @@ class ConnectionTest : Connection("engine") {
   @Throws(InterruptedException::class)
   fun notSendPacketsIfClosingIsDeferred() {
     val values: BlockingQueue<Any> = LinkedBlockingQueue()
-    var socket = EngineSocket(_opts = createOptions())
+    val socket = EngineSocket(_opts = createOptions())
     socket.on(
       EngineSocket.EVENT_OPEN,
-      handler =
-        fun(_) {
-          val noPacket = booleanArrayOf(true)
-          socket.on(
-            EngineSocket.EVENT_UPGRADING,
-            handler =
-              fun(_) {
-                socket.on(
-                  EngineSocket.EVENT_PACKET_CREATE,
-                  handler =
-                    fun(_) {
-                      noPacket[0] = false
-                    }
-                )
-                socket.close()
-                socket.send("hi")
+      handler = { _ ->
+        val noPacket = booleanArrayOf(true)
+        socket.on(
+          EngineSocket.EVENT_UPGRADING,
+          handler = { _ ->
+            socket.on(EngineSocket.EVENT_PACKET_CREATE, handler = { _ -> noPacket[0] = false })
+            socket.close()
+            socket.send("hi")
+          }
+        )
+        Timer()
+          .schedule(
+            object : TimerTask() {
+              override fun run() {
+                values.offer(noPacket[0])
               }
+            },
+            1200
           )
-          Timer()
-            .schedule(
-              object : TimerTask() {
-                override fun run() {
-                  values.offer(noPacket[0])
-                }
-              },
-              1200
-            )
-        }
+      }
     )
     socket.open()
     assertTrue(values.take() as Boolean)
@@ -231,27 +183,22 @@ class ConnectionTest : Connection("engine") {
   @Throws(InterruptedException::class)
   fun sendAllBufferedPacketsIfClosingIsDeferred() {
     val values: BlockingQueue<Any> = LinkedBlockingQueue()
-    var socket = EngineSocket(_opts = createOptions())
+    val socket = EngineSocket(_opts = createOptions())
     socket.on(
       EngineSocket.EVENT_OPEN,
-      handler =
-        fun(_) {
-          socket.on(
-            EngineSocket.EVENT_UPGRADING,
-            handler =
-              fun(_) {
-                socket.send("hi")
-                socket.close()
-              }
-          )
-          socket.on(
-            EngineSocket.EVENT_CLOSE,
-            handler =
-              fun(_) {
-                values.offer(socket.writeBuffer.size)
-              }
-          )
-        }
+      handler = { _ ->
+        socket.on(
+          EngineSocket.EVENT_UPGRADING,
+          handler = { _ ->
+            socket.send("hi")
+            socket.close()
+          }
+        )
+        socket.on(
+          EngineSocket.EVENT_CLOSE,
+          handler = { _ -> values.offer(socket.writeBuffer.size) }
+        )
+      }
     )
     socket.open()
     assertEquals(0, values.take() as Int)
@@ -261,14 +208,13 @@ class ConnectionTest : Connection("engine") {
   @Throws(InterruptedException::class)
   fun receivePing() {
     val values: BlockingQueue<Any> = LinkedBlockingQueue()
-    var socket = EngineSocket(_opts = createOptions())
+    val socket = EngineSocket(_opts = createOptions())
     socket.on(
       EngineSocket.EVENT_PING,
-      handler =
-        fun(_) {
-          values.offer("end")
-          socket.close()
-        }
+      handler = { _ ->
+        values.offer("end")
+        socket.close()
+      }
     )
     socket.open()
     assertEquals("end", values.take())

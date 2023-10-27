@@ -70,18 +70,8 @@ class XHRTransport : PollingTransport {
       request(mutableMapOf<String, Any>("method" to "POST", "data" to data, "isBinary" to isBinary))
     req.once("d", fn)
     req.once("success", fn)
-    req.once(
-      "error",
-      fun(err: Any?) {
-        onError("xhr post error", err as String)
-      }
-    )
-    req.once(
-      EVENT_RESPONSE_HEADERS,
-      fun(resp) {
-        emit(EVENT_RESPONSE_HEADERS, resp)
-      }
-    )
+    req.once("error", { err: Any? -> onError("xhr post error", err as String) })
+    req.once(EVENT_RESPONSE_HEADERS, { resp -> emit(EVENT_RESPONSE_HEADERS, resp) })
     sendXhr = req
   }
 
@@ -89,18 +79,8 @@ class XHRTransport : PollingTransport {
   override fun doPoll() {
     Logger.debug("xhr doing poll")
     var req = request()
-    req.once(
-      "data",
-      fun(data: Any?) {
-        onData(data as String)
-      }
-    )
-    req.once(
-      "error",
-      fun(err: Any?) {
-        onError("xhr post error", err as String)
-      }
-    )
+    req.once("data", { data: Any? -> onData(data as String) })
+    req.once("error", { err: Any? -> onError("xhr post error", err as String) })
     pollXhr = req
   }
 }
@@ -193,13 +173,7 @@ class Request : EventEmitter {
             onData(respData)
           }
         } else {
-          Timer(
-              1,
-              fun() {
-                onError(resp.status.value.toString())
-              }
-            )
-            .schedule()
+          Timer(1, { -> onError(resp.status.value.toString()) }).schedule()
         }
       } catch (e: Exception) {
         onError("${e.message}")
